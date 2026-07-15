@@ -13,6 +13,7 @@ import 'providers/employee_provider.dart';
 import 'providers/settings_provider.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/client_repository.dart';
+import 'repositories/dashboard_repository.dart';
 import 'repositories/employee_repository.dart';
 import 'repositories/firebase/firebase_auth_repository.dart';
 import 'repositories/firebase/firebase_client_repository.dart';
@@ -20,6 +21,7 @@ import 'repositories/firebase/firebase_employee_repository.dart';
 import 'repositories/firebase/firebase_settings_repository.dart';
 import 'repositories/mock/mock_auth_repository.dart';
 import 'repositories/mock/mock_client_repository.dart';
+import 'repositories/mock/mock_dashboard_repository.dart';
 import 'repositories/mock/mock_employee_repository.dart';
 import 'repositories/mock/mock_settings_repository.dart';
 import 'repositories/settings_repository.dart';
@@ -33,10 +35,12 @@ import 'repositories/settings_repository.dart';
 /// here — the only place in the app that knows whether Mock or
 /// Firebase repositories are active, controlled by [kUseFirebase].
 /// [EmployeeRepository], [ClientRepository], and [SettingsRepository]
-/// instances are each shared between their dedicated provider and
-/// [DashboardProvider], so a CRUD operation in one provider is
-/// immediately reflected if the dashboard reloads. No provider or
-/// page/widget code differs between the two modes.
+/// instances are each shared between their dedicated provider and any
+/// other provider that needs them. [DashboardProvider] is the one
+/// exception: it depends on its own dedicated [DashboardRepository],
+/// always [MockDashboardRepository] regardless of [kUseFirebase] — the
+/// Dashboard module always shows demo data and has zero dependency on
+/// Firebase being configured.
 class AssistlyProApp extends StatelessWidget {
   const AssistlyProApp({super.key});
 
@@ -50,6 +54,9 @@ class AssistlyProApp extends StatelessWidget {
         kUseFirebase ? FirebaseClientRepository() : MockClientRepository();
     final SettingsRepository settingsRepository =
         kUseFirebase ? FirebaseSettingsRepository() : MockSettingsRepository();
+    // Dashboard is intentionally never Firebase-gated: it always
+    // shows demo data (enhancement brief's "Fallback Behavior").
+    final DashboardRepository dashboardRepository = MockDashboardRepository();
 
     return MultiProvider(
       providers: [
@@ -66,11 +73,7 @@ class AssistlyProApp extends StatelessWidget {
           create: (_) => SettingsProvider(settingsRepository),
         ),
         ChangeNotifierProvider<DashboardProvider>(
-          create: (_) => DashboardProvider(
-            employeeRepository: employeeRepository,
-            clientRepository: clientRepository,
-            settingsRepository: settingsRepository,
-          ),
+          create: (_) => DashboardProvider(dashboardRepository: dashboardRepository),
         ),
       ],
       child: MaterialApp(
