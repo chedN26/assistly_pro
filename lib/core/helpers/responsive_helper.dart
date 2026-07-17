@@ -29,4 +29,16 @@ class ResponsiveHelper {
   static bool isTablet(BuildContext context) => deviceTypeOf(context) == DeviceType.tablet;
 
   static bool isDesktop(BuildContext context) => deviceTypeOf(context) == DeviceType.desktop;
+
+  /// Clamps a dialog's preferred content width to fit narrow screens.
+  /// A fixed-width dialog (e.g. 420px) can overflow on small phones
+  /// (~320–360dp logical width); this leaves room for the dialog's
+  /// own insets/margins instead of forcing the preferred width
+  /// unconditionally.
+  static double dialogContentWidth(BuildContext context, {double preferred = 420}) {
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final double maxAvailable = screenWidth - 64;
+    if (maxAvailable <= 0) return preferred;
+    return preferred < maxAvailable ? preferred : maxAvailable;
+  }
 }

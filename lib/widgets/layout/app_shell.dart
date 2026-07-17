@@ -32,6 +32,8 @@ class AppShell extends StatefulWidget {
     AppRoutes.employeeDetails: AppStrings.pageTitleEmployeeDetails,
     AppRoutes.clients: AppStrings.pageTitleClients,
     AppRoutes.clientDetails: AppStrings.pageTitleClientDetails,
+    AppRoutes.departments: AppStrings.pageTitleDepartments,
+    AppRoutes.departmentDetails: AppStrings.pageTitleDepartmentDetails,
     AppRoutes.settings: AppStrings.pageTitleSettings,
     AppRoutes.about: AppStrings.pageTitleAbout,
   };
@@ -110,7 +112,14 @@ class _TopBar extends StatelessWidget {
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: Text(
+          title,
+          key: ValueKey<String>(title),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ),
     );
   }
 }

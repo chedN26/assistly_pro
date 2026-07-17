@@ -110,6 +110,19 @@ class ClientProvider extends ChangeNotifier {
     }
   }
 
+  /// Reactivates a previously deactivated client. Reuses
+  /// [updateClient] rather than adding a new repository method — see
+  /// [EmployeeProvider.activateEmployee] for the same reasoning.
+  Future<bool> activateClient(String id) async {
+    final Client? current = getById(id);
+    if (current == null) {
+      _errorMessage = 'Client not found.';
+      notifyListeners();
+      return false;
+    }
+    return updateClient(current.copyWith(status: Status.active));
+  }
+
   List<ClientPayment> paymentsFor(String clientId) => _paymentsByClientId[clientId] ?? const [];
 
   Future<void> loadPayments(String clientId) async {

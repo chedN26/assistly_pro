@@ -11,6 +11,9 @@ class Employee {
     required this.hourlyRate,
     required this.status,
     required this.createdAt,
+    required this.department,
+    required this.supervisor,
+    this.assignedClientId,
   });
 
   final String id;
@@ -22,6 +25,18 @@ class Employee {
   final Status status;
   final DateTime createdAt;
 
+  /// Department name (e.g. "Human Resources"). Free-text — departments
+  /// are derived groupings of employees, not a separate persisted
+  /// collection (see [DepartmentSummary]).
+  final String department;
+
+  /// This employee's supervisor / department head name.
+  final String supervisor;
+
+  /// The [Client.id] this employee is currently assigned to, if any.
+  /// Null means unassigned.
+  final String? assignedClientId;
+
   Employee copyWith({
     String? id,
     String? name,
@@ -31,6 +46,10 @@ class Employee {
     double? hourlyRate,
     Status? status,
     DateTime? createdAt,
+    String? department,
+    String? supervisor,
+    String? assignedClientId,
+    bool clearAssignedClientId = false,
   }) {
     return Employee(
       id: id ?? this.id,
@@ -41,6 +60,10 @@ class Employee {
       hourlyRate: hourlyRate ?? this.hourlyRate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      department: department ?? this.department,
+      supervisor: supervisor ?? this.supervisor,
+      assignedClientId:
+          clearAssignedClientId ? null : (assignedClientId ?? this.assignedClientId),
     );
   }
 
@@ -54,6 +77,11 @@ class Employee {
       hourlyRate: (map['hourlyRate'] as num).toDouble(),
       status: StatusX.fromString(map['status'] as String),
       createdAt: DateTime.parse(map['createdAt'] as String),
+      // Defaulted for backward compatibility with any pre-existing
+      // records that predate these fields.
+      department: (map['department'] as String?) ?? 'Unassigned',
+      supervisor: (map['supervisor'] as String?) ?? 'Unassigned',
+      assignedClientId: map['assignedClientId'] as String?,
     );
   }
 
@@ -67,6 +95,9 @@ class Employee {
       'hourlyRate': hourlyRate,
       'status': status.label,
       'createdAt': createdAt.toIso8601String(),
+      'department': department,
+      'supervisor': supervisor,
+      'assignedClientId': assignedClientId,
     };
   }
 }

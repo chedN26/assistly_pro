@@ -114,6 +114,9 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 180,
         status: Status.active,
         createdAt: DateTime(2026, 1, 15),
+        department: 'Operations',
+        supervisor: 'Robert Tan',
+        assignedClientId: 'CLI001',
       ),
       Employee(
         id: 'EMP002',
@@ -124,6 +127,9 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 165,
         status: Status.active,
         createdAt: DateTime(2026, 1, 20),
+        department: 'Human Resources',
+        supervisor: 'Jane Smith',
+        assignedClientId: 'CLI002',
       ),
       Employee(
         id: 'EMP003',
@@ -134,6 +140,8 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 200,
         status: Status.active,
         createdAt: DateTime(2026, 2, 1),
+        department: 'Finance',
+        supervisor: 'Robert Tan',
       ),
       Employee(
         id: 'EMP004',
@@ -144,6 +152,9 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 175,
         status: Status.active,
         createdAt: DateTime(2026, 2, 10),
+        department: 'Marketing',
+        supervisor: 'Kevin Lee',
+        assignedClientId: 'CLI003',
       ),
       Employee(
         id: 'EMP005',
@@ -154,6 +165,9 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 190,
         status: Status.active,
         createdAt: DateTime(2026, 3, 1),
+        department: 'Marketing',
+        supervisor: 'Kevin Lee',
+        assignedClientId: 'CLI001',
       ),
       Employee(
         id: 'EMP006',
@@ -164,6 +178,8 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 150,
         status: Status.inactive,
         createdAt: DateTime(2026, 1, 5),
+        department: 'Human Resources',
+        supervisor: 'Jane Smith',
       ),
       Employee(
         id: 'EMP007',
@@ -174,6 +190,8 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 210,
         status: Status.active,
         createdAt: DateTime(2026, 3, 15),
+        department: 'Operations',
+        supervisor: 'Jane Smith',
       ),
       Employee(
         id: 'EMP008',
@@ -184,6 +202,8 @@ class MockEmployeeRepository implements EmployeeRepository {
         hourlyRate: 170,
         status: Status.inactive,
         createdAt: DateTime(2026, 2, 20),
+        department: 'Marketing',
+        supervisor: 'Kevin Lee',
       ),
     ];
   }

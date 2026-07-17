@@ -4,11 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
 import '../../models/client.dart';
+import '../../models/status.dart';
 import '../../providers/client_provider.dart';
 import '../../widgets/clients/client_form_dialog.dart';
 import '../../widgets/clients/client_table.dart';
+import '../../widgets/common/app_snackbar.dart';
 import '../../widgets/common/confirmation_dialog.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/list_page_toolbar.dart';
@@ -39,18 +40,14 @@ class _ClientListPageState extends State<ClientListPage> {
   Future<void> _openAddDialog() async {
     final bool? result = await ClientFormDialog.show(context);
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.clientAddedMessage), backgroundColor: AppColors.success),
-      );
+      AppSnackBar.showSuccess(context, AppStrings.clientAddedMessage);
     }
   }
 
   Future<void> _openEditDialog(Client client) async {
     final bool? result = await ClientFormDialog.show(context, client: client);
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.clientUpdatedMessage), backgroundColor: AppColors.success),
-      );
+      AppSnackBar.showSuccess(context, AppStrings.clientUpdatedMessage);
     }
   }
 
@@ -58,28 +55,34 @@ class _ClientListPageState extends State<ClientListPage> {
     Navigator.of(context).pushNamed(AppRoutes.clientDetails, arguments: client.id);
   }
 
-  Future<void> _deactivateClient(Client client) async {
+  Future<void> _toggleClientStatus(Client client) async {
+    final bool isActivating = client.status == Status.inactive;
+
     final bool confirmed = await ConfirmationDialog.show(
       context,
-      title: AppStrings.deactivateClientTitle,
-      message: 'Are you sure you want to deactivate "${client.companyName}"?',
-      confirmLabel: 'Deactivate',
-      isDanger: true,
+      title: isActivating ? AppStrings.activateClientTitle : AppStrings.deactivateClientTitle,
+      message: isActivating
+          ? 'Activate this client?'
+          : 'Are you sure you want to deactivate "${client.companyName}"?',
+      confirmLabel: isActivating ? 'Activate' : 'Deactivate',
+      isDanger: !isActivating,
     );
     if (!confirmed || !mounted) return;
 
     final ClientProvider provider = context.read<ClientProvider>();
-    final bool success = await provider.deactivateClient(client.id);
+    final bool success = isActivating
+        ? await provider.activateClient(client.id)
+        : await provider.deactivateClient(client.id);
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? AppStrings.clientDeactivatedMessage : (provider.errorMessage ?? 'Failed to deactivate client.'),
-        ),
-        backgroundColor: success ? AppColors.success : AppColors.danger,
-      ),
-    );
+    if (success) {
+      AppSnackBar.showSuccess(
+        context,
+        isActivating ? AppStrings.clientActivatedMessage : AppStrings.clientDeactivatedMessage,
+      );
+    } else {
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to update client status.');
+    }
   }
 
   @override
@@ -102,8 +105,24 @@ class _ClientListPageState extends State<ClientListPage> {
                   addButtonLabel: AppStrings.addClientTitle,
                   onAddPressed: _openAddDialog,
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Expanded(child: _buildContent(provider)),
+                const SizedBox(height: AppSpacing.md),
+                // Thin progress indicator during search/filter refetch,
+                // separate from the full-page spinner shown only on the
+                // very first load — keeps the existing table visible
+                // while new results come in.
+                SizedBox(
+                  height: 2,
+                  child: provider.isLoading && provider.clients.isNotEmpty
+                      ? const LinearProgressIndicator(minHeight: 2)
+                      : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _buildContent(provider),
+                  ),
+                ),
               ],
             ),
           );
@@ -114,15 +133,20 @@ class _ClientListPageState extends State<ClientListPage> {
 
   Widget _buildContent(ClientProvider provider) {
     if (provider.isLoading && provider.clients.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(key: ValueKey('loading'), child: CircularProgressIndicator());
     }
 
     if (provider.errorMessage != null && provider.clients.isEmpty) {
-      return AppErrorState(message: provider.errorMessage!, onRetry: provider.loadClients);
+      return AppErrorState(
+        key: const ValueKey('error'),
+        message: provider.errorMessage!,
+        onRetry: provider.loadClients,
+      );
     }
 
     if (provider.clients.isEmpty) {
       return const PlaceholderPageContent(
+        key: ValueKey('empty'),
         icon: Icons.business_outlined,
         title: AppStrings.clientsEmptyMessage,
         message: 'Try adjusting your search or filters, or add a new client.',
@@ -130,6 +154,7 @@ class _ClientListPageState extends State<ClientListPage> {
     }
 
     return SingleChildScrollView(
+      key: const ValueKey('content'),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.sm),
@@ -137,7 +162,7 @@ class _ClientListPageState extends State<ClientListPage> {
             clients: provider.clients,
             onView: _viewClient,
             onEdit: _openEditDialog,
-            onDeactivate: _deactivateClient,
+            onToggleStatus: _toggleClientStatus,
           ),
         ),
       ),

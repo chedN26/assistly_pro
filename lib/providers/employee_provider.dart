@@ -111,6 +111,21 @@ class EmployeeProvider extends ChangeNotifier {
     }
   }
 
+  /// Reactivates a previously deactivated employee. Reuses
+  /// [updateEmployee] rather than adding a new repository method — the
+  /// repository already fully supports arbitrary field updates, so a
+  /// dedicated `activateEmployee` repository method would just
+  /// duplicate that.
+  Future<bool> activateEmployee(String id) async {
+    final Employee? current = getById(id);
+    if (current == null) {
+      _errorMessage = 'Employee not found.';
+      notifyListeners();
+      return false;
+    }
+    return updateEmployee(current.copyWith(status: Status.active));
+  }
+
   List<EmployeeHour> hoursFor(String employeeId) => _hoursByEmployeeId[employeeId] ?? const [];
 
   Future<void> loadHours(String employeeId) async {

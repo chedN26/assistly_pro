@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/employee.dart';
 import '../../utils/formatters.dart';
 import '../common/status_badge.dart';
 
 /// Employee Information card (UI/UX spec Section 10): name, email,
-/// phone, position, hourly rate, and status.
+/// phone, position, hourly rate, status, department, supervisor, and
+/// assigned client.
 class EmployeeInfoCard extends StatelessWidget {
-  const EmployeeInfoCard({super.key, required this.employee});
+  const EmployeeInfoCard({super.key, required this.employee, this.assignedClientName});
 
   final Employee employee;
+
+  /// Resolved display name for [Employee.assignedClientId], or null
+  /// if unassigned. Resolved by the page (which has access to
+  /// [ClientProvider]) rather than here, keeping this widget purely
+  /// presentational.
+  final String? assignedClientName;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +64,12 @@ class EmployeeInfoCard extends StatelessWidget {
             _InfoRow(label: 'Email', value: employee.email),
             _InfoRow(label: 'Phone', value: employee.phone),
             _InfoRow(label: 'Hourly Rate', value: AppFormatters.currency(employee.hourlyRate)),
+            _InfoRow(label: AppStrings.employeeDepartmentLabel, value: employee.department),
+            _InfoRow(label: AppStrings.employeeSupervisorLabel, value: employee.supervisor),
+            _InfoRow(
+              label: AppStrings.employeeAssignedClientLabel,
+              value: assignedClientName ?? AppStrings.employeeAssignedClientNone,
+            ),
           ],
         ),
       ),

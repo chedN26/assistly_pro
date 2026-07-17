@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_spacing.dart';
-
-/// Search field paired with a Search button (UI/UX spec Section 17).
-/// Per spec, search executes only when the button is clicked (or
-/// Enter is pressed, an equivalent explicit action) — never live as
-/// the user types.
+/// Live search field (UI/UX spec Section 17, superseded per
+/// enhancement request): results update automatically as the user
+/// types, debounced by 300ms so rapid keystrokes don't fire a reload
+/// per character. No Search button — clearing the field (via the
+/// clear icon or deleting all text) immediately shows the complete
+/// list, matching [EmployeeProvider]/[ClientProvider]'s existing
+/// "empty query = no filter" behavior.
 class AppSearchBar extends StatefulWidget {
   const AppSearchBar({
     super.key,
@@ -24,6 +27,7 @@ class AppSearchBar extends StatefulWidget {
 
 class _AppSearchBarState extends State<AppSearchBar> {
   late final TextEditingController _controller;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -33,28 +37,46 @@ class _AppSearchBarState extends State<AppSearchBar> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _submit() => widget.onSearch(_controller.text.trim());
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      widget.onSearch(value.trim());
+    });
+    // Rebuild so the clear (x) button's visibility follows the text.
+    setState(() {});
+  }
+
+  void _clear() {
+    _debounce?.cancel();
+    _controller.clear();
+    widget.onSearch('');
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: widget.hintText, prefixIcon: const Icon(Icons.search)),
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submit(),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        ElevatedButton(onPressed: _submit, child: const Text('Search')),
-      ],
+    return TextField(
+      controller: _controller,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _controller.text.isEmpty
+            ? null
+            : IconButton(icon: const Icon(Icons.clear), onPressed: _clear),
+      ),
+      onChanged: _onChanged,
+      // Enter still works as an immediate, non-debounced submit for
+      // keyboard users who prefer it.
+      onSubmitted: (value) {
+        _debounce?.cancel();
+        widget.onSearch(value.trim());
+      },
     );
   }
 }

@@ -13,6 +13,7 @@ class AppStrings {
   static const String navDashboard = 'Dashboard';
   static const String navEmployees = 'Employees';
   static const String navClients = 'Clients';
+  static const String navDepartments = 'Departments';
   static const String navSettings = 'Settings';
   static const String navAbout = 'About';
   static const String navLogout = 'Logout';
@@ -24,6 +25,8 @@ class AppStrings {
   static const String pageTitleEmployeeDetails = 'Employee Details';
   static const String pageTitleClients = 'Clients';
   static const String pageTitleClientDetails = 'Client Details';
+  static const String pageTitleDepartments = 'Departments';
+  static const String pageTitleDepartmentDetails = 'Department Details';
   static const String pageTitleSettings = 'Settings';
   static const String pageTitleAbout = 'About';
 
@@ -81,6 +84,7 @@ class AppStrings {
   static const String addEmployeeTitle = 'Add Employee';
   static const String editEmployeeTitle = 'Edit Employee';
   static const String deactivateEmployeeTitle = 'Deactivate Employee';
+  static const String activateEmployeeTitle = 'Activate Employee';
   static const String addHoursTitle = 'Add Hours';
 
   static const String employeeNameLabel = 'Name';
@@ -89,21 +93,28 @@ class AppStrings {
   static const String employeePositionLabel = 'Position';
   static const String employeeHourlyRateLabel = 'Hourly Rate';
   static const String employeeHoursWorkedLabel = 'Hours Worked';
+  static const String employeeDepartmentLabel = 'Department';
+  static const String employeeSupervisorLabel = 'Supervisor';
+  static const String employeeAssignedClientLabel = 'Assigned Client';
+  static const String employeeAssignedClientNone = 'None';
 
   static const String searchEmployeesHint = 'Search employees by name...';
 
   static const String employeeAddedMessage = 'Employee added successfully.';
   static const String employeeUpdatedMessage = 'Employee updated successfully.';
   static const String employeeDeactivatedMessage = 'Employee deactivated successfully.';
+  static const String employeeActivatedMessage = 'Employee activated successfully.';
   static const String hoursAddedMessage = 'Hours added successfully.';
 
   // Client module (Phase 6)
   static const String clientsEmptyMessage = 'No clients found.';
+  static const String departmentsEmptyMessage = 'No departments found.';
   static const String clientPaymentsEmptyMessage = 'No payments available.';
 
   static const String addClientTitle = 'Add Client';
   static const String editClientTitle = 'Edit Client';
   static const String deactivateClientTitle = 'Deactivate Client';
+  static const String activateClientTitle = 'Activate Client';
   static const String addPaymentTitle = 'Add Payment';
 
   static const String clientCompanyNameLabel = 'Company Name';
@@ -118,6 +129,7 @@ class AppStrings {
   static const String clientAddedMessage = 'Client added successfully.';
   static const String clientUpdatedMessage = 'Client updated successfully.';
   static const String clientDeactivatedMessage = 'Client deactivated successfully.';
+  static const String clientActivatedMessage = 'Client activated successfully.';
   static const String paymentAddedMessage = 'Payment added successfully.';
 
   // Settings module (Phase 7)

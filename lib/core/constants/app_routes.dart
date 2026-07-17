@@ -13,6 +13,8 @@ class AppRoutes {
   static const String employeeDetails = '/employees/details';
   static const String clients = '/clients';
   static const String clientDetails = '/clients/details';
+  static const String departments = '/departments';
+  static const String departmentDetails = '/departments/details';
   static const String settings = '/settings';
   static const String about = '/about';
 }

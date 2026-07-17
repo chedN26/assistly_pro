@@ -4,6 +4,8 @@ import '../../pages/about/about_page.dart';
 import '../../pages/client_details/client_details_page.dart';
 import '../../pages/clients/client_list_page.dart';
 import '../../pages/dashboard/dashboard_page.dart';
+import '../../pages/department_details/department_details_page.dart';
+import '../../pages/departments/department_list_page.dart';
 import '../../pages/employee_details/employee_details_page.dart';
 import '../../pages/employees/employee_list_page.dart';
 import '../../pages/login/login_page.dart';
@@ -50,6 +52,16 @@ class RouteGenerator {
         final String? clientId = settings.arguments as String?;
         return _route(
           AuthGuard(child: ClientDetailsPage(clientId: clientId)),
+          settings,
+        );
+
+      case AppRoutes.departments:
+        return _route(const AuthGuard(child: DepartmentListPage()), settings);
+
+      case AppRoutes.departmentDetails:
+        final String? departmentName = settings.arguments as String?;
+        return _route(
+          AuthGuard(child: DepartmentDetailsPage(departmentName: departmentName)),
           settings,
         );
 

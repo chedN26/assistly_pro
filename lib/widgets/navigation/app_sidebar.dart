@@ -22,6 +22,7 @@ const List<_NavEntry> _navItems = <_NavEntry>[
   _NavEntry(icon: Icons.dashboard_outlined, label: AppStrings.navDashboard, route: AppRoutes.dashboard),
   _NavEntry(icon: Icons.people_outline, label: AppStrings.navEmployees, route: AppRoutes.employees),
   _NavEntry(icon: Icons.business_outlined, label: AppStrings.navClients, route: AppRoutes.clients),
+  _NavEntry(icon: Icons.apartment_outlined, label: AppStrings.navDepartments, route: AppRoutes.departments),
   _NavEntry(icon: Icons.settings_outlined, label: AppStrings.navSettings, route: AppRoutes.settings),
   _NavEntry(icon: Icons.info_outline, label: AppStrings.navAbout, route: AppRoutes.about),
 ];
@@ -51,6 +52,9 @@ class AppSidebar extends StatelessWidget {
     }
     if (itemRoute == AppRoutes.clients) {
       return currentRoute == AppRoutes.clients || currentRoute == AppRoutes.clientDetails;
+    }
+    if (itemRoute == AppRoutes.departments) {
+      return currentRoute == AppRoutes.departments || currentRoute == AppRoutes.departmentDetails;
     }
     return currentRoute == itemRoute;
   }

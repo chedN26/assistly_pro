@@ -3,18 +3,25 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/helpers/responsive_helper.dart';
 import '../../models/employee.dart';
 import '../../models/status.dart';
+import '../../providers/client_provider.dart';
 import '../../providers/employee_provider.dart';
 import '../../utils/validators.dart';
+import '../common/app_snackbar.dart';
 
 /// Add/Edit Employee dialog (UI/UX spec Section 15). A single widget
 /// handles both modes — [employee] is null for Add, non-null for
 /// Edit — since the fields are identical, avoiding duplicated form
 /// code. Status is intentionally not editable here: new employees are
-/// always Active, and status only changes via the separate Deactivate
-/// action per the UI/UX spec's action list.
+/// always Active, and status only changes via the separate
+/// Activate/Deactivate action per the UI/UX spec's action list.
+///
+/// Includes Department, Supervisor (free text), and Assigned Client
+/// (a dropdown of existing clients, sourced from [ClientProvider] —
+/// a read-only cross-module dependency, not a modification of the
+/// Client module itself).
 class EmployeeFormDialog extends StatefulWidget {
   const EmployeeFormDialog({super.key, this.employee});
 
@@ -42,6 +49,9 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
   late final TextEditingController _phoneController;
   late final TextEditingController _positionController;
   late final TextEditingController _hourlyRateController;
+  late final TextEditingController _departmentController;
+  late final TextEditingController _supervisorController;
+  String? _assignedClientId;
   bool _isSubmitting = false;
 
   @override
@@ -53,6 +63,19 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
     _phoneController = TextEditingController(text: e?.phone ?? '');
     _positionController = TextEditingController(text: e?.position ?? '');
     _hourlyRateController = TextEditingController(text: e != null ? _formatRate(e.hourlyRate) : '');
+    _departmentController = TextEditingController(text: e?.department ?? '');
+    _supervisorController = TextEditingController(text: e?.supervisor ?? '');
+    _assignedClientId = e?.assignedClientId;
+
+    // Ensure the Assigned Client dropdown has data even if the Client
+    // list page was never visited this session.
+    Future.microtask(() {
+      if (!mounted) return;
+      final ClientProvider clientProvider = context.read<ClientProvider>();
+      if (clientProvider.clients.isEmpty) {
+        clientProvider.loadClients();
+      }
+    });
   }
 
   String _formatRate(double rate) => rate % 1 == 0 ? rate.toStringAsFixed(0) : rate.toString();
@@ -64,6 +87,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
     _phoneController.dispose();
     _positionController.dispose();
     _hourlyRateController.dispose();
+    _departmentController.dispose();
+    _supervisorController.dispose();
     super.dispose();
   }
 
@@ -83,6 +108,10 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         phone: _phoneController.text.trim(),
         position: _positionController.text.trim(),
         hourlyRate: hourlyRate,
+        department: _departmentController.text.trim(),
+        supervisor: _supervisorController.text.trim(),
+        assignedClientId: _assignedClientId,
+        clearAssignedClientId: _assignedClientId == null,
       );
       success = await provider.updateEmployee(updated);
     } else {
@@ -95,6 +124,9 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         hourlyRate: hourlyRate,
         status: Status.active,
         createdAt: DateTime.now(),
+        department: _departmentController.text.trim(),
+        supervisor: _supervisorController.text.trim(),
+        assignedClientId: _assignedClientId,
       );
       success = await provider.addEmployee(newEmployee);
     }
@@ -105,23 +137,32 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
     if (success) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Something went wrong.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Something went wrong.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<DropdownMenuItem<String?>> clientItems = [
+      const DropdownMenuItem<String?>(value: null, child: Text(AppStrings.employeeAssignedClientNone)),
+      for (final client in context.watch<ClientProvider>().clients)
+        DropdownMenuItem<String?>(value: client.id, child: Text(client.companyName)),
+    ];
+
+    // If the previously-assigned client is no longer in the loaded
+    // list (e.g. not yet fetched), keep its id selected but fall back
+    // to null in the dropdown's displayed value to avoid a Flutter
+    // assertion about a value with no matching item.
+    final bool selectedClientStillListed =
+        clientItems.any((item) => item.value == _assignedClientId);
+
     return AlertDialog(
       title: Text(widget.isEditMode ? AppStrings.editEmployeeTitle : AppStrings.addEmployeeTitle),
       content: SizedBox(
-        width: 420,
+        width: ResponsiveHelper.dialogContentWidth(context, preferred: 440),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -165,6 +206,29 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: AppValidators.positiveNumber,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _departmentController,
+                  enabled: !_isSubmitting,
+                  decoration: const InputDecoration(labelText: AppStrings.employeeDepartmentLabel),
+                  validator: AppValidators.required,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _supervisorController,
+                  enabled: !_isSubmitting,
+                  decoration: const InputDecoration(labelText: AppStrings.employeeSupervisorLabel),
+                  validator: AppValidators.required,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String?>(
+                  initialValue: selectedClientStillListed ? _assignedClientId : null,
+                  decoration: const InputDecoration(labelText: AppStrings.employeeAssignedClientLabel),
+                  items: clientItems,
+                  onChanged: _isSubmitting
+                      ? null
+                      : (value) => setState(() => _assignedClientId = value),
                 ),
               ],
             ),

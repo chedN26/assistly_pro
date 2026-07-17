@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
 import '../../models/employee.dart';
+import '../../models/status.dart';
 import '../../providers/employee_provider.dart';
+import '../../widgets/common/app_snackbar.dart';
 import '../../widgets/common/confirmation_dialog.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/list_page_toolbar.dart';
@@ -37,18 +38,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   Future<void> _openAddDialog() async {
     final bool? result = await EmployeeFormDialog.show(context);
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.employeeAddedMessage), backgroundColor: AppColors.success),
-      );
+      AppSnackBar.showSuccess(context, AppStrings.employeeAddedMessage);
     }
   }
 
   Future<void> _openEditDialog(Employee employee) async {
     final bool? result = await EmployeeFormDialog.show(context, employee: employee);
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.employeeUpdatedMessage), backgroundColor: AppColors.success),
-      );
+      AppSnackBar.showSuccess(context, AppStrings.employeeUpdatedMessage);
     }
   }
 
@@ -56,28 +53,34 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     Navigator.of(context).pushNamed(AppRoutes.employeeDetails, arguments: employee.id);
   }
 
-  Future<void> _deactivateEmployee(Employee employee) async {
+  Future<void> _toggleEmployeeStatus(Employee employee) async {
+    final bool isActivating = employee.status == Status.inactive;
+
     final bool confirmed = await ConfirmationDialog.show(
       context,
-      title: AppStrings.deactivateEmployeeTitle,
-      message: 'Are you sure you want to deactivate "${employee.name}"?',
-      confirmLabel: 'Deactivate',
-      isDanger: true,
+      title: isActivating ? AppStrings.activateEmployeeTitle : AppStrings.deactivateEmployeeTitle,
+      message: isActivating
+          ? 'Activate this employee?'
+          : 'Are you sure you want to deactivate "${employee.name}"?',
+      confirmLabel: isActivating ? 'Activate' : 'Deactivate',
+      isDanger: !isActivating,
     );
     if (!confirmed || !mounted) return;
 
     final EmployeeProvider provider = context.read<EmployeeProvider>();
-    final bool success = await provider.deactivateEmployee(employee.id);
+    final bool success = isActivating
+        ? await provider.activateEmployee(employee.id)
+        : await provider.deactivateEmployee(employee.id);
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? AppStrings.employeeDeactivatedMessage : (provider.errorMessage ?? 'Failed to deactivate employee.'),
-        ),
-        backgroundColor: success ? AppColors.success : AppColors.danger,
-      ),
-    );
+    if (success) {
+      AppSnackBar.showSuccess(
+        context,
+        isActivating ? AppStrings.employeeActivatedMessage : AppStrings.employeeDeactivatedMessage,
+      );
+    } else {
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to update employee status.');
+    }
   }
 
   @override
@@ -100,8 +103,24 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   addButtonLabel: AppStrings.addEmployeeTitle,
                   onAddPressed: _openAddDialog,
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Expanded(child: _buildContent(provider)),
+                const SizedBox(height: AppSpacing.md),
+                // Thin progress indicator during search/filter refetch,
+                // separate from the full-page spinner shown only on the
+                // very first load — keeps the existing table visible
+                // while new results come in.
+                SizedBox(
+                  height: 2,
+                  child: provider.isLoading && provider.employees.isNotEmpty
+                      ? const LinearProgressIndicator(minHeight: 2)
+                      : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _buildContent(provider),
+                  ),
+                ),
               ],
             ),
           );
@@ -112,15 +131,20 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
   Widget _buildContent(EmployeeProvider provider) {
     if (provider.isLoading && provider.employees.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(key: ValueKey('loading'), child: CircularProgressIndicator());
     }
 
     if (provider.errorMessage != null && provider.employees.isEmpty) {
-      return AppErrorState(message: provider.errorMessage!, onRetry: provider.loadEmployees);
+      return AppErrorState(
+        key: const ValueKey('error'),
+        message: provider.errorMessage!,
+        onRetry: provider.loadEmployees,
+      );
     }
 
     if (provider.employees.isEmpty) {
       return const PlaceholderPageContent(
+        key: ValueKey('empty'),
         icon: Icons.people_outline,
         title: AppStrings.employeesEmptyMessage,
         message: 'Try adjusting your search or filters, or add a new employee.',
@@ -128,6 +152,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     }
 
     return SingleChildScrollView(
+      key: const ValueKey('content'),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.sm),
@@ -135,7 +160,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
             employees: provider.employees,
             onView: _viewEmployee,
             onEdit: _openEditDialog,
-            onDeactivate: _deactivateEmployee,
+            onToggleStatus: _toggleEmployeeStatus,
           ),
         ),
       ),
