@@ -23,6 +23,9 @@ abstract class EmployeeRepository {
   /// action.
   Future<Employee> deactivateEmployee(String id);
 
+  /// Permanently removes an employee record.
+  Future<void> deleteEmployee(String id);
+
   /// Work-hour records for a single employee, sorted by date.
   Future<List<EmployeeHour>> getEmployeeHours(String employeeId);
 

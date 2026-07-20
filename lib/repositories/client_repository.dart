@@ -21,6 +21,9 @@ abstract class ClientRepository {
   /// action.
   Future<Client> deactivateClient(String id);
 
+  /// Permanently removes a client record.
+  Future<void> deleteClient(String id);
+
   /// Payment records for a single client, sorted by date.
   Future<List<ClientPayment>> getClientPayments(String clientId);
 

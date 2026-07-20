@@ -83,6 +83,27 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     }
   }
 
+  Future<void> _deleteEmployee(Employee employee) async {
+    final bool confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Employee',
+      message: 'Permanently delete "${employee.name}"? This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDanger: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final EmployeeProvider provider = context.read<EmployeeProvider>();
+    final bool success = await provider.deleteEmployee(employee.id);
+    if (!mounted) return;
+
+    if (success) {
+      AppSnackBar.showSuccess(context, 'Employee deleted successfully.');
+    } else {
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to delete employee.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppShell(
@@ -161,6 +182,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
             onView: _viewEmployee,
             onEdit: _openEditDialog,
             onToggleStatus: _toggleEmployeeStatus,
+            onDelete: _deleteEmployee,
           ),
         ),
       ),

@@ -76,6 +76,13 @@ class MockClientRepository implements ClientRepository {
   }
 
   @override
+  Future<void> deleteClient(String id) async {
+    await _simulateLatency();
+    _clients.removeWhere((c) => c.id == id);
+    _payments.removeWhere((p) => p.clientId == id);
+  }
+
+  @override
   Future<List<ClientPayment>> getClientPayments(String clientId) async {
     await _simulateLatency();
     final List<ClientPayment> payments = _payments.where((p) => p.clientId == clientId).toList()

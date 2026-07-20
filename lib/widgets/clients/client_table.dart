@@ -15,6 +15,7 @@ class ClientTable extends StatelessWidget {
     required this.onView,
     required this.onEdit,
     required this.onToggleStatus,
+    required this.onDelete,
   });
 
   final List<Client> clients;
@@ -26,12 +27,14 @@ class ClientTable extends StatelessWidget {
   /// [Client.status].
   final ValueChanged<Client> onToggleStatus;
 
+  final ValueChanged<Client> onDelete;
+
   static const List<FlexTableColumn> _columns = [
     FlexTableColumn(label: 'Company Name', flex: 3),
     FlexTableColumn(label: 'Contact Person', flex: 2),
     FlexTableColumn(label: 'Service Type', flex: 2),
     FlexTableColumn(label: 'Status', flex: 1),
-    FlexTableColumn(label: 'Actions', flex: 2),
+    FlexTableColumn(label: 'Actions', flex: 3),
   ];
 
   @override
@@ -66,6 +69,11 @@ class ClientTable extends StatelessWidget {
                 icon: Icon(isActive ? Icons.block : Icons.check_circle_outline),
                 tooltip: isActive ? 'Deactivate' : 'Activate',
                 onPressed: () => onToggleStatus(client),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete',
+                onPressed: () => onDelete(client),
               ),
             ],
           ),

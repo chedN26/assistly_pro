@@ -10,7 +10,7 @@ import 'providers/auth_provider.dart';
 import 'providers/client_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/employee_provider.dart';
-import 'providers/settings_provider.dart';
+import 'providers/operating_expense_provider.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/client_repository.dart';
 import 'repositories/dashboard_repository.dart';
@@ -18,13 +18,13 @@ import 'repositories/employee_repository.dart';
 import 'repositories/firebase/firebase_auth_repository.dart';
 import 'repositories/firebase/firebase_client_repository.dart';
 import 'repositories/firebase/firebase_employee_repository.dart';
-import 'repositories/firebase/firebase_settings_repository.dart';
+import 'repositories/firebase/firebase_operating_expense_repository.dart';
 import 'repositories/mock/mock_auth_repository.dart';
 import 'repositories/mock/mock_client_repository.dart';
 import 'repositories/mock/mock_dashboard_repository.dart';
 import 'repositories/mock/mock_employee_repository.dart';
-import 'repositories/mock/mock_settings_repository.dart';
-import 'repositories/settings_repository.dart';
+import 'repositories/mock/mock_operating_expense_repository.dart';
+import 'repositories/operating_expense_repository.dart';
 
 /// Root widget of the Assistly Pro application.
 ///
@@ -34,13 +34,15 @@ import 'repositories/settings_repository.dart';
 /// The active repository implementations are constructed exactly once
 /// here — the only place in the app that knows whether Mock or
 /// Firebase repositories are active, controlled by [kUseFirebase].
-/// [EmployeeRepository], [ClientRepository], and [SettingsRepository]
-/// instances are each shared between their dedicated provider and any
-/// other provider that needs them. [DashboardProvider] is the one
-/// exception: it depends on its own dedicated [DashboardRepository],
-/// always [MockDashboardRepository] regardless of [kUseFirebase] — the
-/// Dashboard module always shows demo data and has zero dependency on
-/// Firebase being configured.
+/// [EmployeeRepository], [ClientRepository], and
+/// [OperatingExpenseRepository] instances are each shared between
+/// their dedicated provider and any other provider that needs them.
+/// [DashboardProvider] is the one exception: it depends on its own
+/// dedicated [DashboardRepository], always [MockDashboardRepository]
+/// regardless of [kUseFirebase] — the Dashboard module always shows
+/// demo data and has zero dependency on Firebase being configured
+/// (this will change in the next migration step, wiring it to real
+/// Employee/Client/OperatingExpense data instead).
 class AssistlyProApp extends StatelessWidget {
   const AssistlyProApp({super.key});
 
@@ -52,8 +54,8 @@ class AssistlyProApp extends StatelessWidget {
         kUseFirebase ? FirebaseEmployeeRepository() : MockEmployeeRepository();
     final ClientRepository clientRepository =
         kUseFirebase ? FirebaseClientRepository() : MockClientRepository();
-    final SettingsRepository settingsRepository =
-        kUseFirebase ? FirebaseSettingsRepository() : MockSettingsRepository();
+    final OperatingExpenseRepository operatingExpenseRepository =
+        kUseFirebase ? FirebaseOperatingExpenseRepository() : MockOperatingExpenseRepository();
     // Dashboard is intentionally never Firebase-gated: it always
     // shows demo data (enhancement brief's "Fallback Behavior").
     final DashboardRepository dashboardRepository = MockDashboardRepository();
@@ -69,8 +71,8 @@ class AssistlyProApp extends StatelessWidget {
         ChangeNotifierProvider<ClientProvider>(
           create: (_) => ClientProvider(clientRepository),
         ),
-        ChangeNotifierProvider<SettingsProvider>(
-          create: (_) => SettingsProvider(settingsRepository),
+        ChangeNotifierProvider<OperatingExpenseProvider>(
+          create: (_) => OperatingExpenseProvider(operatingExpenseRepository),
         ),
         ChangeNotifierProvider<DashboardProvider>(
           create: (_) => DashboardProvider(dashboardRepository: dashboardRepository),

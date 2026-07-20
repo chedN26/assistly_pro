@@ -126,6 +126,18 @@ class EmployeeProvider extends ChangeNotifier {
     return updateEmployee(current.copyWith(status: Status.active));
   }
 
+  Future<bool> deleteEmployee(String id) async {
+    try {
+      await _repository.deleteEmployee(id);
+      await loadEmployees();
+      return true;
+    } catch (_) {
+      _errorMessage = 'Failed to delete employee.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   List<EmployeeHour> hoursFor(String employeeId) => _hoursByEmployeeId[employeeId] ?? const [];
 
   Future<void> loadHours(String employeeId) async {

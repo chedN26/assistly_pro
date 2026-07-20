@@ -19,12 +19,23 @@ class AppValidators {
   }
 
   /// Validates a numeric field that must be strictly greater than 0
-  /// (e.g. Hourly Rate, Monthly Payment, Payment Amount).
+  /// (e.g. Hourly Rate, Payment Amount).
   static String? positiveNumber(String? value, {String message = 'Enter a value greater than 0.'}) {
     if (value == null || value.trim().isEmpty) return 'This field is required.';
     final double? parsed = double.tryParse(value.trim());
     if (parsed == null) return 'Enter a valid number.';
     if (parsed <= 0) return message;
+    return null;
+  }
+
+  /// Validates a numeric field that must be zero or greater — for
+  /// values where 0 is legitimate (e.g. a month with no tools
+  /// expense), unlike [positiveNumber].
+  static String? nonNegativeNumber(String? value, {String message = 'Enter a value of 0 or greater.'}) {
+    if (value == null || value.trim().isEmpty) return 'This field is required.';
+    final double? parsed = double.tryParse(value.trim());
+    if (parsed == null) return 'Enter a valid number.';
+    if (parsed < 0) return message;
     return null;
   }
 

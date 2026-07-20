@@ -134,9 +134,8 @@ class AppStrings {
 
   // Settings module (Phase 7)
   static const String resetButton = 'Reset';
-  static const String settingsCompanyNameLabel = 'Company Name';
-  static const String settingsToolsPercentageLabel = 'Tools Expense %';
-  static const String settingsMiscellaneousPercentageLabel = 'Miscellaneous Expense %';
-  static const String settingsOwnerSharePercentageLabel = 'Owner Share %';
+  static const String settingsToolsExpenseLabel = 'Tools Expense';
+  static const String settingsMiscellaneousExpenseLabel = 'Miscellaneous Expense';
+  static const String settingsMonthLabel = 'Month';
   static const String settingsSavedMessage = 'Settings saved successfully.';
 }

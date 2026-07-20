@@ -13,7 +13,7 @@ import '../services/ai_service.dart';
 /// and Tab 3 (AI Assistant recommendation).
 ///
 /// Depends only on [DashboardRepository] and [AIService] — no longer
-/// on [EmployeeRepository]/[ClientRepository]/[SettingsRepository].
+/// on [EmployeeRepository]/[ClientRepository]/[OperatingExpenseRepository].
 /// The Dashboard is its own independent module now; it always shows
 /// demo data regardless of Employee/Client module state or whether
 /// Firebase is configured (see enhancement brief's "Fallback

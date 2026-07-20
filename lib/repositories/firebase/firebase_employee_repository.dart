@@ -106,6 +106,18 @@ class FirebaseEmployeeRepository implements EmployeeRepository {
   }
 
   @override
+  Future<void> deleteEmployee(String id) async {
+    final QuerySnapshot<Map<String, dynamic>> hourDocs =
+        await _employeeTimeLogs.where('employeeId', isEqualTo: id).get();
+    final WriteBatch batch = _firestore.batch();
+    batch.delete(_employees.doc(id));
+    for (final doc in hourDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<List<EmployeeHour>> getEmployeeHours(String employeeId) async {
     // Sorted client-side rather than via Firestore orderBy() to avoid
     // requiring a composite index (equality + order-by on different

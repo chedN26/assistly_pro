@@ -88,6 +88,18 @@ class FirebaseClientRepository implements ClientRepository {
   }
 
   @override
+  Future<void> deleteClient(String id) async {
+    final QuerySnapshot<Map<String, dynamic>> paymentDocs =
+        await _clientPayments.where('clientId', isEqualTo: id).get();
+    final WriteBatch batch = _firestore.batch();
+    batch.delete(_clients.doc(id));
+    for (final doc in paymentDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<List<ClientPayment>> getClientPayments(String clientId) async {
     final QuerySnapshot<Map<String, dynamic>> snapshot =
         await _clientPayments.where('clientId', isEqualTo: clientId).get();

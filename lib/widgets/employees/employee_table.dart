@@ -18,6 +18,7 @@ class EmployeeTable extends StatelessWidget {
     required this.onView,
     required this.onEdit,
     required this.onToggleStatus,
+    required this.onDelete,
   });
 
   final List<Employee> employees;
@@ -29,13 +30,15 @@ class EmployeeTable extends StatelessWidget {
   /// [Employee.status].
   final ValueChanged<Employee> onToggleStatus;
 
+  final ValueChanged<Employee> onDelete;
+
   static const List<FlexTableColumn> _columns = [
     FlexTableColumn(label: 'Employee Name', flex: 3),
     FlexTableColumn(label: 'Position', flex: 2),
     FlexTableColumn(label: 'Department', flex: 2),
     FlexTableColumn(label: 'Hourly Rate', flex: 2),
     FlexTableColumn(label: 'Status', flex: 1),
-    FlexTableColumn(label: 'Actions', flex: 2),
+    FlexTableColumn(label: 'Actions', flex: 3),
   ];
 
   @override
@@ -71,6 +74,11 @@ class EmployeeTable extends StatelessWidget {
                 icon: Icon(isActive ? Icons.block : Icons.check_circle_outline),
                 tooltip: isActive ? 'Deactivate' : 'Activate',
                 onPressed: () => onToggleStatus(employee),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete',
+                onPressed: () => onDelete(employee),
               ),
             ],
           ),

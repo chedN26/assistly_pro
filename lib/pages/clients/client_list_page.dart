@@ -85,6 +85,27 @@ class _ClientListPageState extends State<ClientListPage> {
     }
   }
 
+  Future<void> _deleteClient(Client client) async {
+    final bool confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Client',
+      message: 'Permanently delete "${client.companyName}"? This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDanger: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final ClientProvider provider = context.read<ClientProvider>();
+    final bool success = await provider.deleteClient(client.id);
+    if (!mounted) return;
+
+    if (success) {
+      AppSnackBar.showSuccess(context, 'Client deleted successfully.');
+    } else {
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to delete client.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppShell(
@@ -163,6 +184,7 @@ class _ClientListPageState extends State<ClientListPage> {
             onView: _viewClient,
             onEdit: _openEditDialog,
             onToggleStatus: _toggleClientStatus,
+            onDelete: _deleteClient,
           ),
         ),
       ),

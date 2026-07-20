@@ -79,6 +79,13 @@ class MockEmployeeRepository implements EmployeeRepository {
   }
 
   @override
+  Future<void> deleteEmployee(String id) async {
+    await _simulateLatency();
+    _employees.removeWhere((e) => e.id == id);
+    _hours.removeWhere((h) => h.employeeId == id);
+  }
+
+  @override
   Future<List<EmployeeHour>> getEmployeeHours(String employeeId) async {
     await _simulateLatency();
     final List<EmployeeHour> hours = _hours.where((h) => h.employeeId == employeeId).toList()

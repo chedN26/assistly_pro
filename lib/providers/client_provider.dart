@@ -123,6 +123,18 @@ class ClientProvider extends ChangeNotifier {
     return updateClient(current.copyWith(status: Status.active));
   }
 
+  Future<bool> deleteClient(String id) async {
+    try {
+      await _repository.deleteClient(id);
+      await loadClients();
+      return true;
+    } catch (_) {
+      _errorMessage = 'Failed to delete client.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   List<ClientPayment> paymentsFor(String clientId) => _paymentsByClientId[clientId] ?? const [];
 
   Future<void> loadPayments(String clientId) async {

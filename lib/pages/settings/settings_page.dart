@@ -5,18 +5,22 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
-import '../../models/business_settings.dart';
 import '../../providers/dashboard_provider.dart';
-import '../../providers/settings_provider.dart';
+import '../../providers/operating_expense_provider.dart';
 import '../../utils/validators.dart';
+import '../../widgets/common/app_snackbar.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/layout/app_shell.dart';
 
-/// Business configuration page (UI/UX spec Section 13): company name
-/// and expense-percentage fields, with Save/Reset actions. Saving
-/// immediately refreshes [DashboardProvider] so the dashboard's
-/// figures reflect the new settings without waiting for the user to
-/// navigate there first.
+/// Business configuration page: monthly Tools/Miscellaneous expense
+/// entry (one record per month), replacing the old percentage-based
+/// settings entirely. Owner Share is now a fixed 5% (see
+/// `DashboardCalculator`) and is shown here only as an informational
+/// note, not an editable field — and Company Name has no equivalent
+/// in the new schema (it was confirmed unused anywhere else in the
+/// app before being dropped). Saving immediately refreshes
+/// [DashboardProvider] so figures reflect the change without waiting
+/// for the user to navigate there first.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -25,51 +29,60 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const List<String> _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _companyNameController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
   final TextEditingController _miscController = TextEditingController();
-  final TextEditingController _ownerShareController = TextEditingController();
 
   bool _isSaving = false;
-  bool _controllersInitialized = false;
+
+  /// Which month's data the text fields currently reflect — compared
+  /// against the provider's selected month each build so switching
+  /// months (or the initial load completing) repopulates the fields,
+  /// without wiping out in-progress edits for the month already shown.
+  String? _populatedForMonth;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
+    Future.microtask(() {
       if (!mounted) return;
-      final SettingsProvider provider = context.read<SettingsProvider>();
-      await provider.loadSettings();
-      if (!mounted) return;
-      _populateControllers(provider.settings);
+      context.read<OperatingExpenseProvider>().loadExpenseForSelectedMonth();
     });
   }
 
   @override
   void dispose() {
-    _companyNameController.dispose();
     _toolsController.dispose();
     _miscController.dispose();
-    _ownerShareController.dispose();
     super.dispose();
   }
 
-  void _populateControllers(BusinessSettings? settings) {
-    if (settings == null) return;
-    _companyNameController.text = settings.companyName;
-    _toolsController.text = _formatPercentage(settings.toolsPercentage);
-    _miscController.text = _formatPercentage(settings.miscellaneousPercentage);
-    _ownerShareController.text = _formatPercentage(settings.ownerSharePercentage);
-    setState(() => _controllersInitialized = true);
+  String _formatAmount(double value) => value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
+
+  String _monthLabel(String monthKey) {
+    final List<String> parts = monthKey.split('-');
+    final int year = int.parse(parts[0]);
+    final int month = int.parse(parts[1]);
+    return '${_monthNames[month - 1]} $year';
   }
 
-  String _formatPercentage(double value) => value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
+  void _populateControllers(OperatingExpenseProvider provider) {
+    _toolsController.text = provider.expense != null ? _formatAmount(provider.expense!.toolsExpense) : '';
+    _miscController.text =
+        provider.expense != null ? _formatAmount(provider.expense!.miscellaneousExpense) : '';
+    _populatedForMonth = provider.selectedMonth;
+  }
 
   /// Discards any unsaved edits, reverting the fields to the last
-  /// successfully saved settings (not a hardcoded default).
-  void _resetFields() {
-    _populateControllers(context.read<SettingsProvider>().settings);
+  /// saved values for the currently-selected month (not a hardcoded
+  /// default) — empty if that month has no record yet.
+  void _resetFields(OperatingExpenseProvider provider) {
+    setState(() => _populateControllers(provider));
   }
 
   Future<void> _save() async {
@@ -77,35 +90,23 @@ class _SettingsPageState extends State<SettingsPage> {
 
     setState(() => _isSaving = true);
 
-    final SettingsProvider settingsProvider = context.read<SettingsProvider>();
-    final BusinessSettings updated = BusinessSettings(
-      companyName: _companyNameController.text.trim(),
-      toolsPercentage: double.parse(_toolsController.text.trim()),
-      miscellaneousPercentage: double.parse(_miscController.text.trim()),
-      ownerSharePercentage: double.parse(_ownerShareController.text.trim()),
+    final OperatingExpenseProvider provider = context.read<OperatingExpenseProvider>();
+    final bool success = await provider.saveExpense(
+      toolsExpense: double.parse(_toolsController.text.trim()),
+      miscellaneousExpense: double.parse(_miscController.text.trim()),
     );
-
-    final bool success = await settingsProvider.updateSettings(updated);
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (success) {
       // Refresh the dashboard right away so its figures are correct
-      // the instant settings change, not just the next time the
+      // the instant expenses change, not just the next time the
       // Dashboard page happens to remount.
       context.read<DashboardProvider>().refresh();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.settingsSavedMessage), backgroundColor: AppColors.success),
-      );
+      AppSnackBar.showSuccess(context, AppStrings.settingsSavedMessage);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(settingsProvider.errorMessage ?? 'Failed to save settings.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to save operating expenses.');
     }
   }
 
@@ -113,22 +114,22 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return AppShell(
       currentRoute: AppRoutes.settings,
-      body: Consumer<SettingsProvider>(
+      body: Consumer<OperatingExpenseProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading && provider.settings == null) {
+          if (!provider.hasLoadedOnce && provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (provider.errorMessage != null && provider.settings == null) {
-            return AppErrorState(message: provider.errorMessage!, onRetry: provider.loadSettings);
+          if (provider.errorMessage != null && !provider.hasLoadedOnce) {
+            return AppErrorState(
+              message: provider.errorMessage!,
+              onRetry: provider.loadExpenseForSelectedMonth,
+            );
           }
 
-          // Populate once, right when settings first become available.
-          // Guarded so later rebuilds (e.g. from unrelated provider
-          // notifications) never overwrite in-progress unsaved edits.
-          if (!_controllersInitialized && provider.settings != null) {
+          if (_populatedForMonth != provider.selectedMonth) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _populateControllers(provider.settings);
+              if (mounted) setState(() => _populateControllers(provider));
             });
           }
 
@@ -139,6 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -148,61 +150,71 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Business Information', style: Theme.of(context).textTheme.titleMedium),
+                              Text('Monthly Operating Expenses', style: Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: AppSpacing.md),
-                              TextFormField(
-                                controller: _companyNameController,
-                                enabled: !_isSaving,
-                                decoration: const InputDecoration(labelText: AppStrings.settingsCompanyNameLabel),
-                                validator: AppValidators.required,
+                              DropdownButtonFormField<String>(
+                                value: provider.selectedMonth,
+                                decoration: const InputDecoration(labelText: AppStrings.settingsMonthLabel),
+                                items: [
+                                  for (final String month in OperatingExpenseProvider.recentMonths())
+                                    DropdownMenuItem(value: month, child: Text(_monthLabel(month))),
+                                ],
+                                onChanged: _isSaving
+                                    ? null
+                                    : (value) {
+                                        if (value != null) provider.selectMonth(value);
+                                      },
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Expense Percentages', style: Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: AppSpacing.md),
                               TextFormField(
                                 controller: _toolsController,
                                 enabled: !_isSaving,
                                 decoration: const InputDecoration(
-                                  labelText: AppStrings.settingsToolsPercentageLabel,
-                                  suffixText: '%',
+                                  labelText: AppStrings.settingsToolsExpenseLabel,
+                                  prefixText: '₱ ',
                                 ),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => AppValidators.numberInRange(value, min: 0, max: 100),
+                                validator: AppValidators.nonNegativeNumber,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               TextFormField(
                                 controller: _miscController,
                                 enabled: !_isSaving,
                                 decoration: const InputDecoration(
-                                  labelText: AppStrings.settingsMiscellaneousPercentageLabel,
-                                  suffixText: '%',
+                                  labelText: AppStrings.settingsMiscellaneousExpenseLabel,
+                                  prefixText: '₱ ',
                                 ),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => AppValidators.numberInRange(value, min: 0, max: 100),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              TextFormField(
-                                controller: _ownerShareController,
-                                enabled: !_isSaving,
-                                decoration: const InputDecoration(
-                                  labelText: AppStrings.settingsOwnerSharePercentageLabel,
-                                  suffixText: '%',
-                                ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => AppValidators.numberInRange(value, min: 0, max: 100),
+                                validator: AppValidators.nonNegativeNumber,
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Owner Share is fixed at 5% of the remaining balance after all '
+                                'expenses — it is not user-configurable.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -210,7 +222,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: _isSaving ? null : _resetFields,
+                              onPressed: _isSaving ? null : () => _resetFields(provider),
                               child: const Text(AppStrings.resetButton),
                             ),
                           ),
