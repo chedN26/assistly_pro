@@ -4,31 +4,43 @@ import '../../models/employee.dart';
 import '../../models/employee_hour.dart';
 import '../../models/status.dart';
 import '../employee_repository.dart';
+import 'firestore_date_codec.dart';
 
 /// Firestore implementation of [EmployeeRepository], backing the
-/// `employees` and `employee_hours` collections (DDD Sections 4 & 5).
+/// `employees` and `employee_time_logs` collections per the Firebase
+/// Database Design Document.
 ///
-/// Dates round-trip as the same ISO8601 strings [Employee.toMap]/
-/// [EmployeeHour.toMap] already produce for [MockEmployeeRepository]
-/// — no Firestore [Timestamp] conversion is needed anywhere in this
-/// file, by design (see Phase 3 model comments).
+/// Dates are stored as native Firestore [Timestamp] values (matching
+/// what `seed.js` writes via the Admin SDK), converted to/from the
+/// ISO8601 strings the models expect via [FirestoreDateCodec] — the
+/// models themselves stay DB-agnostic and never import
+/// `cloud_firestore`.
 class FirebaseEmployeeRepository implements EmployeeRepository {
   FirebaseEmployeeRepository({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
+  static const List<String> _employeeDateFields = ['createdAt', 'updatedAt', 'dateHired'];
+  static const List<String> _hourDateFields = ['workDate', 'createdAt', 'updatedAt'];
+
   CollectionReference<Map<String, dynamic>> get _employees => _firestore.collection('employees');
-  CollectionReference<Map<String, dynamic>> get _employeeHours => _firestore.collection('employee_hours');
+  CollectionReference<Map<String, dynamic>> get _employeeTimeLogs =>
+      _firestore.collection('employee_time_logs');
 
   /// Firestore's document ID is always the source of truth for `id`,
   /// even though the field is also stored in the document body (per
   /// the DDD sample documents) — this guards against the two ever
-  /// drifting out of sync.
-  Employee _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
-      Employee.fromMap({...doc.data(), 'id': doc.id});
+  /// drifting out of sync. `employeeId` is the Firestore-side field
+  /// name for `Employee.id` (see the model's doc comment).
+  Employee _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data(), _employeeDateFields);
+    return Employee.fromMap({...decoded, 'employeeId': doc.id});
+  }
 
-  EmployeeHour _hourFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
-      EmployeeHour.fromMap({...doc.data(), 'id': doc.id});
+  EmployeeHour _hourFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data(), _hourDateFields);
+    return EmployeeHour.fromMap({...decoded, 'timeLogId': doc.id});
+  }
 
   @override
   Future<List<Employee>> getEmployees({Status? status, String? searchQuery}) async {
@@ -55,21 +67,29 @@ class FirebaseEmployeeRepository implements EmployeeRepository {
   Future<Employee?> getEmployeeById(String id) async {
     final DocumentSnapshot<Map<String, dynamic>> doc = await _employees.doc(id).get();
     if (!doc.exists || doc.data() == null) return null;
-    return Employee.fromMap({...doc.data()!, 'id': doc.id});
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data()!, _employeeDateFields);
+    return Employee.fromMap({...decoded, 'employeeId': doc.id});
   }
 
   @override
   Future<Employee> addEmployee(Employee employee) async {
     final DocumentReference<Map<String, dynamic>> docRef = _employees.doc();
-    final Employee newEmployee = employee.copyWith(id: docRef.id);
-    await docRef.set(newEmployee.toMap());
+    final DateTime now = DateTime.now();
+    // The repository — not UI call sites — is authoritative for
+    // id/createdAt/updatedAt on creation.
+    final Employee newEmployee = employee.copyWith(id: docRef.id, createdAt: now, updatedAt: now);
+    await docRef.set(FirestoreDateCodec.encode(newEmployee.toMap(), _employeeDateFields));
     return newEmployee;
   }
 
   @override
   Future<Employee> updateEmployee(Employee employee) async {
-    await _employees.doc(employee.id).set(employee.toMap());
-    return employee;
+    // createdAt is preserved as passed in; only updatedAt is stamped
+    // fresh here, since this method is also reused by
+    // EmployeeProvider.activateEmployee (a status-only change).
+    final Employee updated = employee.copyWith(updatedAt: DateTime.now());
+    await _employees.doc(updated.id).set(FirestoreDateCodec.encode(updated.toMap(), _employeeDateFields));
+    return updated;
   }
 
   @override
@@ -78,9 +98,10 @@ class FirebaseEmployeeRepository implements EmployeeRepository {
     if (!doc.exists || doc.data() == null) {
       throw StateError('Employee with id "$id" not found.');
     }
-    final Employee current = Employee.fromMap({...doc.data()!, 'id': doc.id});
-    final Employee updated = current.copyWith(status: Status.inactive);
-    await _employees.doc(id).set(updated.toMap());
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data()!, _employeeDateFields);
+    final Employee current = Employee.fromMap({...decoded, 'employeeId': doc.id});
+    final Employee updated = current.copyWith(status: Status.inactive, updatedAt: DateTime.now());
+    await _employees.doc(id).set(FirestoreDateCodec.encode(updated.toMap(), _employeeDateFields));
     return updated;
   }
 
@@ -90,7 +111,7 @@ class FirebaseEmployeeRepository implements EmployeeRepository {
     // requiring a composite index (equality + order-by on different
     // fields) to be manually configured in the Firebase console.
     final QuerySnapshot<Map<String, dynamic>> snapshot =
-        await _employeeHours.where('employeeId', isEqualTo: employeeId).get();
+        await _employeeTimeLogs.where('employeeId', isEqualTo: employeeId).get();
     final List<EmployeeHour> hours = snapshot.docs.map(_hourFromDoc).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
     return hours;
@@ -98,15 +119,16 @@ class FirebaseEmployeeRepository implements EmployeeRepository {
 
   @override
   Future<EmployeeHour> addEmployeeHour(EmployeeHour hour) async {
-    final DocumentReference<Map<String, dynamic>> docRef = _employeeHours.doc();
-    final EmployeeHour newHour = hour.copyWith(id: docRef.id);
-    await docRef.set(newHour.toMap());
+    final DocumentReference<Map<String, dynamic>> docRef = _employeeTimeLogs.doc();
+    final DateTime now = DateTime.now();
+    final EmployeeHour newHour = hour.copyWith(id: docRef.id, createdAt: now, updatedAt: now);
+    await docRef.set(FirestoreDateCodec.encode(newHour.toMap(), _hourDateFields));
     return newHour;
   }
 
   @override
   Future<List<EmployeeHour>> getAllHours() async {
-    final QuerySnapshot<Map<String, dynamic>> snapshot = await _employeeHours.get();
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _employeeTimeLogs.get();
     return snapshot.docs.map(_hourFromDoc).toList();
   }
 }

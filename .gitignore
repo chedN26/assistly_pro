@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+scripts/seed/serviceAccountKey.json
+scripts/seed/node_modules/
+firebase-seed/

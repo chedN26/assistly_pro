@@ -9,4 +9,4 @@
 /// This single flag is the entire "swap Mock for Firebase" step the
 /// repository-pattern architecture was designed for since Phase 1 —
 /// no Provider or UI changes are ever required to switch it.
-const bool kUseFirebase = false;
+const bool kUseFirebase = true;

@@ -1,18 +1,23 @@
 rules_version = '2';
 
-// Prototype-level security: any authenticated user (i.e. the manager,
-// signed in via Firebase Auth) can read/write any collection. This
-// app has a single user role (SDD Section 1 — "internal use only by
-// management personnel"), so a per-collection/per-field rule set
-// isn't warranted for this prototype.
-//
-// Deploy via:
-//   firebase deploy --only firestore:rules
-// or paste this file's contents into the Firebase Console under
-// Firestore Database > Rules.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    match /employees/{employeeId} {
+      allow read, write: if request.auth != null;
+    }
+    match /employee_time_logs/{timeLogId} {
+      allow read, write: if request.auth != null;
+    }
+    match /clients/{clientId} {
+      allow read, write: if request.auth != null;
+    }
+    match /client_payments/{paymentId} {
+      allow read, write: if request.auth != null;
+    }
+    match /operating_expenses/{expenseId} {
       allow read, write: if request.auth != null;
     }
   }

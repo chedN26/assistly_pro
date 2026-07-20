@@ -37,19 +37,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    authDomain: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyAob_Z4W5A__Tl8oInnKK0WmrWLH7yJkRw',
+    appId: '1:774413219994:web:fd73d08058615173870723',
+    messagingSenderId: '774413219994',
+    projectId: 'assistly-pro',
+    authDomain: 'assistly-pro.firebaseapp.com',
+    storageBucket: 'assistly-pro.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyDpiYORJ_6IindPI4750VFJtSc8HxVTqQs',
+    appId: '1:774413219994:android:a8845ff86af8ec46870723',
+    messagingSenderId: '774413219994',
+    projectId: 'assistly-pro',
+    storageBucket: 'assistly-pro.firebasestorage.app',
   );
 }

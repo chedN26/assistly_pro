@@ -123,7 +123,12 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         position: _positionController.text.trim(),
         hourlyRate: hourlyRate,
         status: Status.active,
-        createdAt: DateTime.now(),
+        createdAt: DateTime.now(), // Repository re-stamps this on write.
+        updatedAt: DateTime.now(), // Repository re-stamps this on write.
+        // No dedicated "Date Hired" field in this form (deliberately
+        // out of scope for the Firebase migration) — defaults to the
+        // creation date.
+        dateHired: DateTime.now(),
         department: _departmentController.text.trim(),
         supervisor: _supervisorController.text.trim(),
         assignedClientId: _assignedClientId,
@@ -223,7 +228,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String?>(
-                  initialValue: selectedClientStillListed ? _assignedClientId : null,
+                  value: selectedClientStillListed ? _assignedClientId : null,
                   decoration: const InputDecoration(labelText: AppStrings.employeeAssignedClientLabel),
                   items: clientItems,
                   onChanged: _isSubmitting

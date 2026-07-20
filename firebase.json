@@ -1,0 +1,21 @@
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "assistly-pro",
+          "configurations": {
+            "android": "1:774413219994:android:a8845ff86af8ec46870723",
+            "web": "1:774413219994:web:fd73d08058615173870723"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-southeast1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

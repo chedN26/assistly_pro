@@ -1,6 +1,12 @@
 import 'status.dart';
 
-/// Mirrors the `employees` Firestore collection (DDD Section 4).
+/// Mirrors the `employees` Firestore collection per the Firebase
+/// Database Design Document. Dart property names are intentionally
+/// UNCHANGED from before this migration (id, name, phone,
+/// assignedClientId) even though the DDD uses different Firestore
+/// field names (employeeId, fullName, contactNumber, assignedClient)
+/// — only fromMap()/toMap()'s serialization keys changed, so no UI
+/// file that references `.id`/`.name`/`.phone`/etc. needs to change.
 class Employee {
   const Employee({
     required this.id,
@@ -11,6 +17,8 @@ class Employee {
     required this.hourlyRate,
     required this.status,
     required this.createdAt,
+    required this.updatedAt,
+    required this.dateHired,
     required this.department,
     required this.supervisor,
     this.assignedClientId,
@@ -24,6 +32,15 @@ class Employee {
   final double hourlyRate;
   final Status status;
   final DateTime createdAt;
+
+  /// Last-modified timestamp. Repository write methods (not UI code)
+  /// are responsible for stamping this to "now" on every add/update —
+  /// see [MockEmployeeRepository]/[FirebaseEmployeeRepository].
+  final DateTime updatedAt;
+
+  /// Date this employee was hired — distinct from [createdAt] (when
+  /// the record itself was created in the system), per the DDD.
+  final DateTime dateHired;
 
   /// Department name (e.g. "Human Resources"). Free-text — departments
   /// are derived groupings of employees, not a separate persisted
@@ -46,6 +63,8 @@ class Employee {
     double? hourlyRate,
     Status? status,
     DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? dateHired,
     String? department,
     String? supervisor,
     String? assignedClientId,
@@ -60,6 +79,8 @@ class Employee {
       hourlyRate: hourlyRate ?? this.hourlyRate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      dateHired: dateHired ?? this.dateHired,
       department: department ?? this.department,
       supervisor: supervisor ?? this.supervisor,
       assignedClientId:
@@ -69,35 +90,39 @@ class Employee {
 
   factory Employee.fromMap(Map<String, dynamic> map) {
     return Employee(
-      id: map['id'] as String,
-      name: map['name'] as String,
+      id: map['employeeId'] as String,
+      name: map['fullName'] as String,
       email: map['email'] as String,
-      phone: map['phone'] as String,
+      phone: map['contactNumber'] as String,
       position: map['position'] as String,
       hourlyRate: (map['hourlyRate'] as num).toDouble(),
       status: StatusX.fromString(map['status'] as String),
       createdAt: DateTime.parse(map['createdAt'] as String),
       // Defaulted for backward compatibility with any pre-existing
       // records that predate these fields.
+      updatedAt: DateTime.parse((map['updatedAt'] as String?) ?? (map['createdAt'] as String)),
+      dateHired: DateTime.parse((map['dateHired'] as String?) ?? (map['createdAt'] as String)),
       department: (map['department'] as String?) ?? 'Unassigned',
       supervisor: (map['supervisor'] as String?) ?? 'Unassigned',
-      assignedClientId: map['assignedClientId'] as String?,
+      assignedClientId: map['assignedClient'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'name': name,
+      'employeeId': id,
+      'fullName': name,
       'email': email,
-      'phone': phone,
+      'contactNumber': phone,
       'position': position,
       'hourlyRate': hourlyRate,
       'status': status.label,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'dateHired': dateHired.toIso8601String(),
       'department': department,
       'supervisor': supervisor,
-      'assignedClientId': assignedClientId,
+      'assignedClient': assignedClientId,
     };
   }
 }

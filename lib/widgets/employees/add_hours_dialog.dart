@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/helpers/responsive_helper.dart';
 import '../../models/employee_hour.dart';
 import '../../providers/employee_provider.dart';
 import '../../utils/formatters.dart';
 import '../../utils/validators.dart';
+import '../common/app_snackbar.dart';
 
 /// Add Hours dialog (UI/UX spec Section 10/15). Validation:
 /// Date required, Hours Worked between 0 and 24 (DDD Section 12).
@@ -64,11 +65,14 @@ class _AddHoursDialogState extends State<AddHoursDialog> {
     setState(() => _isSubmitting = true);
 
     final EmployeeProvider provider = context.read<EmployeeProvider>();
+    final DateTime now = DateTime.now();
     final EmployeeHour hour = EmployeeHour(
       id: '', // Repository assigns the real ID; placeholder here is discarded.
       employeeId: widget.employeeId,
       date: _selectedDate!,
       hoursWorked: double.parse(_hoursController.text.trim()),
+      createdAt: now, // Repository re-stamps this on write.
+      updatedAt: now, // Repository re-stamps this on write.
     );
     final bool success = await provider.addHour(hour);
 
@@ -78,12 +82,7 @@ class _AddHoursDialogState extends State<AddHoursDialog> {
     if (success) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Failed to add work hours.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to add work hours.');
     }
   }
 
@@ -92,9 +91,10 @@ class _AddHoursDialogState extends State<AddHoursDialog> {
     return AlertDialog(
       title: const Text(AppStrings.addHoursTitle),
       content: SizedBox(
-        width: 360,
+        width: ResponsiveHelper.dialogContentWidth(context, preferred: 360),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -17,13 +17,15 @@ class AboutPage extends StatelessWidget {
     'Flutter (Web & Android)',
     'Dart',
     'Provider (state management)',
-    'Cloud Firestore (planned — currently Mock Repositories)',
+    'Cloud Firestore',
     'fl_chart',
     'Material Design 3',
   ];
 
   static const List<String> _developers = [
-    '[Your Name]',
+    'Garcia, Ched Neo H.',
+    'Ramos, Dean Ian Oliver F.',
+    'Timtim, Abraham Jerico C.'
   ];
 
   @override
@@ -92,7 +94,7 @@ class AboutPage extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 _Section(
                   title: 'Version',
-                  child: Text('0.1.0 (Prototype)', style: Theme.of(context).textTheme.bodyMedium),
+                  child: Text('0.1.0', style: Theme.of(context).textTheme.bodyMedium),
                 ),
               ],
             ),

@@ -5,11 +5,9 @@ import '../../models/employee_hour.dart';
 import '../../models/status.dart';
 import '../employee_repository.dart';
 
-/// In-memory [EmployeeRepository] used for all development phases
-/// prior to Firebase integration. Seeded with realistic demo data so
-/// the UI has something meaningful to display once Phases 4/5 build
-/// the actual pages. Replaced by a Firestore-backed implementation in
-/// the Firebase phase.
+/// In-memory [EmployeeRepository]. Seeded with the same demo data as
+/// `scripts/seed/seed.js` (the Firebase seed script), so Mock and
+/// Firebase modes show identical records when freshly seeded.
 class MockEmployeeRepository implements EmployeeRepository {
   MockEmployeeRepository()
       : _employees = _seedEmployees(),
@@ -47,7 +45,11 @@ class MockEmployeeRepository implements EmployeeRepository {
   @override
   Future<Employee> addEmployee(Employee employee) async {
     await _simulateLatency();
-    final Employee newEmployee = employee.copyWith(id: _uuid.v4());
+    final DateTime now = DateTime.now();
+    // The repository — not UI call sites — is authoritative for
+    // id/createdAt/updatedAt on creation, matching
+    // FirebaseEmployeeRepository's behavior.
+    final Employee newEmployee = employee.copyWith(id: _uuid.v4(), createdAt: now, updatedAt: now);
     _employees.add(newEmployee);
     return newEmployee;
   }
@@ -59,8 +61,9 @@ class MockEmployeeRepository implements EmployeeRepository {
     if (index == -1) {
       throw StateError('Employee with id "${employee.id}" not found.');
     }
-    _employees[index] = employee;
-    return employee;
+    final Employee updated = employee.copyWith(updatedAt: DateTime.now());
+    _employees[index] = updated;
+    return updated;
   }
 
   @override
@@ -70,7 +73,7 @@ class MockEmployeeRepository implements EmployeeRepository {
     if (index == -1) {
       throw StateError('Employee with id "$id" not found.');
     }
-    final Employee updated = _employees[index].copyWith(status: Status.inactive);
+    final Employee updated = _employees[index].copyWith(status: Status.inactive, updatedAt: DateTime.now());
     _employees[index] = updated;
     return updated;
   }
@@ -86,7 +89,8 @@ class MockEmployeeRepository implements EmployeeRepository {
   @override
   Future<EmployeeHour> addEmployeeHour(EmployeeHour hour) async {
     await _simulateLatency();
-    final EmployeeHour newHour = hour.copyWith(id: _uuid.v4());
+    final DateTime now = DateTime.now();
+    final EmployeeHour newHour = hour.copyWith(id: _uuid.v4(), createdAt: now, updatedAt: now);
     _hours.add(newHour);
     return newHour;
   }
@@ -100,12 +104,13 @@ class MockEmployeeRepository implements EmployeeRepository {
   static Future<void> _simulateLatency() => Future.delayed(const Duration(milliseconds: 400));
 
   // ---------------------------------------------------------------------
-  // Seed data
+  // Seed data — matches scripts/seed/seed.js exactly (same records,
+  // same IDs, same dateHired/createdAt values).
   // ---------------------------------------------------------------------
 
   static List<Employee> _seedEmployees() {
     return [
-      Employee(
+      _seedEmployee(
         id: 'EMP001',
         name: 'John Smith',
         email: 'john.smith@assistlypro.com',
@@ -113,12 +118,12 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Virtual Assistant',
         hourlyRate: 180,
         status: Status.active,
-        createdAt: DateTime(2026, 1, 15),
+        dateHired: DateTime(2026, 1, 15),
         department: 'Operations',
         supervisor: 'Robert Tan',
         assignedClientId: 'CLI001',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP002',
         name: 'Maria Santos',
         email: 'maria.santos@assistlypro.com',
@@ -126,12 +131,12 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Customer Support Specialist',
         hourlyRate: 165,
         status: Status.active,
-        createdAt: DateTime(2026, 1, 20),
+        dateHired: DateTime(2026, 1, 20),
         department: 'Human Resources',
         supervisor: 'Jane Smith',
         assignedClientId: 'CLI002',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP003',
         name: 'Michael Reyes',
         email: 'michael.reyes@assistlypro.com',
@@ -139,11 +144,11 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Bookkeeper',
         hourlyRate: 200,
         status: Status.active,
-        createdAt: DateTime(2026, 2, 1),
+        dateHired: DateTime(2026, 2, 1),
         department: 'Finance',
         supervisor: 'Robert Tan',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP004',
         name: 'Angela Cruz',
         email: 'angela.cruz@assistlypro.com',
@@ -151,12 +156,12 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Social Media Manager',
         hourlyRate: 175,
         status: Status.active,
-        createdAt: DateTime(2026, 2, 10),
+        dateHired: DateTime(2026, 2, 10),
         department: 'Marketing',
         supervisor: 'Kevin Lee',
         assignedClientId: 'CLI003',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP005',
         name: 'Daniel Garcia',
         email: 'daniel.garcia@assistlypro.com',
@@ -164,12 +169,12 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Graphic Designer',
         hourlyRate: 190,
         status: Status.active,
-        createdAt: DateTime(2026, 3, 1),
+        dateHired: DateTime(2026, 3, 1),
         department: 'Marketing',
         supervisor: 'Kevin Lee',
         assignedClientId: 'CLI001',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP006',
         name: 'Patricia Lim',
         email: 'patricia.lim@assistlypro.com',
@@ -177,11 +182,11 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Data Entry Specialist',
         hourlyRate: 150,
         status: Status.inactive,
-        createdAt: DateTime(2026, 1, 5),
+        dateHired: DateTime(2026, 1, 5),
         department: 'Human Resources',
         supervisor: 'Jane Smith',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP007',
         name: 'Robert Tan',
         email: 'robert.tan@assistlypro.com',
@@ -189,11 +194,11 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Executive Assistant',
         hourlyRate: 210,
         status: Status.active,
-        createdAt: DateTime(2026, 3, 15),
+        dateHired: DateTime(2026, 3, 15),
         department: 'Operations',
         supervisor: 'Jane Smith',
       ),
-      Employee(
+      _seedEmployee(
         id: 'EMP008',
         name: 'Sophia Dela Cruz',
         email: 'sophia.delacruz@assistlypro.com',
@@ -201,18 +206,51 @@ class MockEmployeeRepository implements EmployeeRepository {
         position: 'Content Writer',
         hourlyRate: 170,
         status: Status.inactive,
-        createdAt: DateTime(2026, 2, 20),
+        dateHired: DateTime(2026, 2, 20),
         department: 'Marketing',
         supervisor: 'Kevin Lee',
       ),
     ];
   }
 
+  /// [dateHired] doubles as `createdAt`/`updatedAt` for seed data,
+  /// matching how `seed.js` stamps its records.
+  static Employee _seedEmployee({
+    required String id,
+    required String name,
+    required String email,
+    required String phone,
+    required String position,
+    required double hourlyRate,
+    required Status status,
+    required DateTime dateHired,
+    required String department,
+    required String supervisor,
+    String? assignedClientId,
+  }) {
+    return Employee(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      position: position,
+      hourlyRate: hourlyRate,
+      status: status,
+      createdAt: dateHired,
+      updatedAt: dateHired,
+      dateHired: dateHired,
+      department: department,
+      supervisor: supervisor,
+      assignedClientId: assignedClientId,
+    );
+  }
+
   /// Two work-weeks of weekday hours (ending just before the app's
   /// "current" demo date of July 12, 2026) for every active employee,
-  /// so the Employee Details hours chart (Phase 5) has meaningful
-  /// data. A rotation offset per employee avoids every row looking
-  /// identical while staying fully deterministic.
+  /// so the Employee Details hours chart has meaningful data. A
+  /// rotation offset per employee avoids every row looking identical
+  /// while staying fully deterministic. Matches `seed.js`'s
+  /// `WEEKDAYS`/`BASE_PATTERN`/`HOURS_ROTATIONS` exactly.
   static List<EmployeeHour> _seedHours() {
     final List<DateTime> weekdays = [
       DateTime(2026, 6, 22),
@@ -234,12 +272,15 @@ class MockEmployeeRepository implements EmployeeRepository {
     void addHoursFor(String employeeId, int rotation) {
       for (int i = 0; i < weekdays.length; i++) {
         final double value = basePattern[(i + rotation) % basePattern.length];
+        final DateTime workDate = weekdays[i];
         hours.add(
           EmployeeHour(
             id: 'HR${counter.toString().padLeft(3, '0')}',
             employeeId: employeeId,
-            date: weekdays[i],
+            date: workDate,
             hoursWorked: value,
+            createdAt: workDate,
+            updatedAt: workDate,
           ),
         );
         counter++;
