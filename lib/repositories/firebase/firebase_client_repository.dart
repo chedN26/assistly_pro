@@ -4,22 +4,33 @@ import '../../models/client.dart';
 import '../../models/client_payment.dart';
 import '../../models/status.dart';
 import '../client_repository.dart';
+import 'firestore_date_codec.dart';
 
 /// Firestore implementation of [ClientRepository], backing the
-/// `clients` and `client_payments` collections (DDD Sections 6 & 7).
-/// Mirrors [FirebaseEmployeeRepository]'s structure.
+/// `clients` and `client_payments` collections per the Firebase
+/// Database Design Document. Mirrors
+/// [FirebaseEmployeeRepository]'s structure, including
+/// [FirestoreDateCodec] usage for Timestamp<->String conversion.
 class FirebaseClientRepository implements ClientRepository {
   FirebaseClientRepository({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
+  static const List<String> _clientDateFields = ['createdAt', 'updatedAt'];
+  static const List<String> _paymentDateFields = ['paymentDate', 'createdAt', 'updatedAt'];
+
   CollectionReference<Map<String, dynamic>> get _clients => _firestore.collection('clients');
   CollectionReference<Map<String, dynamic>> get _clientPayments => _firestore.collection('client_payments');
 
-  Client _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) => Client.fromMap({...doc.data(), 'id': doc.id});
+  Client _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data(), _clientDateFields);
+    return Client.fromMap({...decoded, 'clientId': doc.id});
+  }
 
-  ClientPayment _paymentFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
-      ClientPayment.fromMap({...doc.data(), 'id': doc.id});
+  ClientPayment _paymentFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data(), _paymentDateFields);
+    return ClientPayment.fromMap({...decoded, 'paymentId': doc.id});
+  }
 
   @override
   Future<List<Client>> getClients({Status? status, String? searchQuery}) async {
@@ -43,21 +54,24 @@ class FirebaseClientRepository implements ClientRepository {
   Future<Client?> getClientById(String id) async {
     final DocumentSnapshot<Map<String, dynamic>> doc = await _clients.doc(id).get();
     if (!doc.exists || doc.data() == null) return null;
-    return Client.fromMap({...doc.data()!, 'id': doc.id});
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data()!, _clientDateFields);
+    return Client.fromMap({...decoded, 'clientId': doc.id});
   }
 
   @override
   Future<Client> addClient(Client client) async {
     final DocumentReference<Map<String, dynamic>> docRef = _clients.doc();
-    final Client newClient = client.copyWith(id: docRef.id);
-    await docRef.set(newClient.toMap());
+    final DateTime now = DateTime.now();
+    final Client newClient = client.copyWith(id: docRef.id, createdAt: now, updatedAt: now);
+    await docRef.set(FirestoreDateCodec.encode(newClient.toMap(), _clientDateFields));
     return newClient;
   }
 
   @override
   Future<Client> updateClient(Client client) async {
-    await _clients.doc(client.id).set(client.toMap());
-    return client;
+    final Client updated = client.copyWith(updatedAt: DateTime.now());
+    await _clients.doc(updated.id).set(FirestoreDateCodec.encode(updated.toMap(), _clientDateFields));
+    return updated;
   }
 
   @override
@@ -66,9 +80,10 @@ class FirebaseClientRepository implements ClientRepository {
     if (!doc.exists || doc.data() == null) {
       throw StateError('Client with id "$id" not found.');
     }
-    final Client current = Client.fromMap({...doc.data()!, 'id': doc.id});
-    final Client updated = current.copyWith(status: Status.inactive);
-    await _clients.doc(id).set(updated.toMap());
+    final Map<String, dynamic> decoded = FirestoreDateCodec.decode(doc.data()!, _clientDateFields);
+    final Client current = Client.fromMap({...decoded, 'clientId': doc.id});
+    final Client updated = current.copyWith(status: Status.inactive, updatedAt: DateTime.now());
+    await _clients.doc(id).set(FirestoreDateCodec.encode(updated.toMap(), _clientDateFields));
     return updated;
   }
 
@@ -84,8 +99,9 @@ class FirebaseClientRepository implements ClientRepository {
   @override
   Future<ClientPayment> addClientPayment(ClientPayment payment) async {
     final DocumentReference<Map<String, dynamic>> docRef = _clientPayments.doc();
-    final ClientPayment newPayment = payment.copyWith(id: docRef.id);
-    await docRef.set(newPayment.toMap());
+    final DateTime now = DateTime.now();
+    final ClientPayment newPayment = payment.copyWith(id: docRef.id, createdAt: now, updatedAt: now);
+    await docRef.set(FirestoreDateCodec.encode(newPayment.toMap(), _paymentDateFields));
     return newPayment;
   }
 

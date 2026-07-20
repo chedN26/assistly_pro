@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/client.dart';
-import '../../utils/formatters.dart';
 import '../common/status_badge.dart';
 
 /// Company Information card (UI/UX spec Section 12): company name,
-/// contact person, email, phone, monthly payment, and status.
+/// contact person, email, phone, service type, and status.
 class ClientInfoCard extends StatelessWidget {
   const ClientInfoCard({super.key, required this.client});
 
@@ -26,7 +25,7 @@ class ClientInfoCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
                   child: Text(
                     _initials(client.companyName),
                     style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
@@ -55,7 +54,7 @@ class ClientInfoCard extends StatelessWidget {
             ),
             _ClientInfoRow(label: 'Email', value: client.email),
             _ClientInfoRow(label: 'Phone', value: client.phone),
-            _ClientInfoRow(label: 'Monthly Payment', value: AppFormatters.currency(client.monthlyPayment)),
+            _ClientInfoRow(label: 'Service Type', value: client.serviceType),
           ],
         ),
       ),

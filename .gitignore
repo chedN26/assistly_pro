@@ -44,6 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-scripts/seed/serviceAccountKey.json
-scripts/seed/node_modules/
+scripts/
 firebase-seed/

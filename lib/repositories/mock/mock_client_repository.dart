@@ -5,9 +5,9 @@ import '../../models/client_payment.dart';
 import '../../models/status.dart';
 import '../client_repository.dart';
 
-/// In-memory [ClientRepository] used for all development phases prior
-/// to Firebase integration. Seeded with realistic demo data. Replaced
-/// by a Firestore-backed implementation in the Firebase phase.
+/// In-memory [ClientRepository]. Seeded with the same demo data as
+/// `scripts/seed/seed.js`, so Mock and Firebase modes show identical
+/// records when freshly seeded.
 class MockClientRepository implements ClientRepository {
   MockClientRepository()
       : _clients = _seedClients(),
@@ -45,7 +45,8 @@ class MockClientRepository implements ClientRepository {
   @override
   Future<Client> addClient(Client client) async {
     await _simulateLatency();
-    final Client newClient = client.copyWith(id: _uuid.v4());
+    final DateTime now = DateTime.now();
+    final Client newClient = client.copyWith(id: _uuid.v4(), createdAt: now, updatedAt: now);
     _clients.add(newClient);
     return newClient;
   }
@@ -57,8 +58,9 @@ class MockClientRepository implements ClientRepository {
     if (index == -1) {
       throw StateError('Client with id "${client.id}" not found.');
     }
-    _clients[index] = client;
-    return client;
+    final Client updated = client.copyWith(updatedAt: DateTime.now());
+    _clients[index] = updated;
+    return updated;
   }
 
   @override
@@ -68,7 +70,7 @@ class MockClientRepository implements ClientRepository {
     if (index == -1) {
       throw StateError('Client with id "$id" not found.');
     }
-    final Client updated = _clients[index].copyWith(status: Status.inactive);
+    final Client updated = _clients[index].copyWith(status: Status.inactive, updatedAt: DateTime.now());
     _clients[index] = updated;
     return updated;
   }
@@ -84,7 +86,8 @@ class MockClientRepository implements ClientRepository {
   @override
   Future<ClientPayment> addClientPayment(ClientPayment payment) async {
     await _simulateLatency();
-    final ClientPayment newPayment = payment.copyWith(id: _uuid.v4());
+    final DateTime now = DateTime.now();
+    final ClientPayment newPayment = payment.copyWith(id: _uuid.v4(), createdAt: now, updatedAt: now);
     _payments.add(newPayment);
     return newPayment;
   }
@@ -98,77 +101,103 @@ class MockClientRepository implements ClientRepository {
   static Future<void> _simulateLatency() => Future.delayed(const Duration(milliseconds: 400));
 
   // ---------------------------------------------------------------------
-  // Seed data
+  // Seed data — matches scripts/seed/seed.js exactly.
   // ---------------------------------------------------------------------
 
   static List<Client> _seedClients() {
     return [
-      Client(
+      _seedClient(
         id: 'CLI001',
         companyName: 'ABC Retail Corp',
         contactPerson: 'Michael Cruz',
         email: 'abc@retailcorp.com',
         phone: '09221234501',
-        monthlyPayment: 50000,
+        serviceType: 'Full-Service Virtual Assistance',
         status: Status.active,
         createdAt: DateTime(2026, 1, 10),
       ),
-      Client(
+      _seedClient(
         id: 'CLI002',
         companyName: 'Bright Ideas Marketing',
         contactPerson: 'Jenny Uy',
         email: 'jenny@brightideas.com',
         phone: '09221234502',
-        monthlyPayment: 35000,
+        serviceType: 'Social Media Management',
         status: Status.active,
         createdAt: DateTime(2026, 1, 25),
       ),
-      Client(
+      _seedClient(
         id: 'CLI003',
         companyName: 'Solid Rock Realty',
         contactPerson: 'Mark Villanueva',
         email: 'mark@solidrockrealty.com',
         phone: '09221234503',
-        monthlyPayment: 42000,
+        serviceType: 'Administrative Support',
         status: Status.active,
         createdAt: DateTime(2026, 2, 5),
       ),
-      Client(
+      _seedClient(
         id: 'CLI004',
         companyName: 'Fresh Bites Café',
         contactPerson: 'Karen Ong',
         email: 'karen@freshbites.com',
         phone: '09221234504',
-        monthlyPayment: 28000,
+        serviceType: 'Bookkeeping Services',
         status: Status.inactive,
         createdAt: DateTime(2026, 1, 5),
       ),
-      Client(
+      _seedClient(
         id: 'CLI005',
         companyName: 'Nova Tech Solutions',
         contactPerson: 'Paul Mendoza',
         email: 'paul@novatech.com',
         phone: '09221234505',
-        monthlyPayment: 60000,
+        serviceType: 'Full-Service Virtual Assistance',
         status: Status.active,
         createdAt: DateTime(2026, 3, 1),
       ),
-      Client(
+      _seedClient(
         id: 'CLI006',
         companyName: 'Golden Gate Logistics',
         contactPerson: 'Ella Ramos',
         email: 'ella@goldengate.com',
         phone: '09221234506',
-        monthlyPayment: 45000,
+        serviceType: 'Customer Support Outsourcing',
         status: Status.inactive,
         createdAt: DateTime(2026, 2, 15),
       ),
     ];
   }
 
-  /// Three months of payment history (May–July 2026) for every active
-  /// client, matching their agreed monthlyPayment amount, so the
-  /// Client Details revenue chart (Phase 6) has meaningful data.
+  static Client _seedClient({
+    required String id,
+    required String companyName,
+    required String contactPerson,
+    required String email,
+    required String phone,
+    required String serviceType,
+    required Status status,
+    required DateTime createdAt,
+  }) {
+    return Client(
+      id: id,
+      companyName: companyName,
+      contactPerson: contactPerson,
+      email: email,
+      phone: phone,
+      serviceType: serviceType,
+      status: status,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+  }
+
+  /// Three months of payment history (May–July 2026) for every client
+  /// that was active at seed time, matching `seed.js`'s
+  /// `PAYMENT_AMOUNTS` exactly (these amounts previously mirrored
+  /// each client's now-removed `monthlyPayment` field — kept
+  /// unchanged since Revenue is computed from these actual payments,
+  /// never from `monthlyPayment`).
   static List<ClientPayment> _seedPayments() {
     final List<DateTime> paymentDates = [
       DateTime(2026, 5, 1),
@@ -187,6 +216,8 @@ class MockClientRepository implements ClientRepository {
             clientId: clientId,
             date: date,
             amount: amount,
+            createdAt: date,
+            updatedAt: date,
           ),
         );
         counter++;

@@ -3,16 +3,17 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/helpers/responsive_helper.dart';
 import '../../models/client.dart';
 import '../../models/status.dart';
 import '../../providers/client_provider.dart';
 import '../../utils/validators.dart';
+import '../common/app_snackbar.dart';
 
 /// Add/Edit Client dialog (UI/UX spec Section 15). A single widget
 /// handles both modes — [client] is null for Add, non-null for Edit.
 /// Status is not editable here: new clients are always Active, and
-/// status only changes via the separate Deactivate action.
+/// status only changes via the separate Activate/Deactivate action.
 class ClientFormDialog extends StatefulWidget {
   const ClientFormDialog({super.key, this.client});
 
@@ -39,7 +40,7 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
   late final TextEditingController _contactPersonController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _monthlyPaymentController;
+  late final TextEditingController _serviceTypeController;
   bool _isSubmitting = false;
 
   @override
@@ -50,10 +51,8 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
     _contactPersonController = TextEditingController(text: c?.contactPerson ?? '');
     _emailController = TextEditingController(text: c?.email ?? '');
     _phoneController = TextEditingController(text: c?.phone ?? '');
-    _monthlyPaymentController = TextEditingController(text: c != null ? _formatAmount(c.monthlyPayment) : '');
+    _serviceTypeController = TextEditingController(text: c?.serviceType ?? '');
   }
-
-  String _formatAmount(double amount) => amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toString();
 
   @override
   void dispose() {
@@ -61,7 +60,7 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
     _contactPersonController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _monthlyPaymentController.dispose();
+    _serviceTypeController.dispose();
     super.dispose();
   }
 
@@ -71,7 +70,7 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
     setState(() => _isSubmitting = true);
 
     final ClientProvider provider = context.read<ClientProvider>();
-    final double monthlyPayment = double.parse(_monthlyPaymentController.text.trim());
+    final String serviceType = _serviceTypeController.text.trim();
     bool success;
 
     if (widget.isEditMode) {
@@ -80,19 +79,21 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
         contactPerson: _contactPersonController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
-        monthlyPayment: monthlyPayment,
+        serviceType: serviceType,
       );
       success = await provider.updateClient(updated);
     } else {
+      final DateTime now = DateTime.now();
       final Client newClient = Client(
         id: '', // Repository assigns the real ID; placeholder here is discarded.
         companyName: _companyNameController.text.trim(),
         contactPerson: _contactPersonController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
-        monthlyPayment: monthlyPayment,
+        serviceType: serviceType,
         status: Status.active,
-        createdAt: DateTime.now(),
+        createdAt: now, // Repository re-stamps this on write.
+        updatedAt: now, // Repository re-stamps this on write.
       );
       success = await provider.addClient(newClient);
     }
@@ -103,12 +104,7 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
     if (success) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Something went wrong.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Something went wrong.');
     }
   }
 
@@ -117,9 +113,10 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
     return AlertDialog(
       title: Text(widget.isEditMode ? AppStrings.editClientTitle : AppStrings.addClientTitle),
       content: SizedBox(
-        width: 420,
+        width: ResponsiveHelper.dialogContentWidth(context, preferred: 420),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -155,14 +152,10 @@ class _ClientFormDialogState extends State<ClientFormDialog> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
-                  controller: _monthlyPaymentController,
+                  controller: _serviceTypeController,
                   enabled: !_isSubmitting,
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.clientMonthlyPaymentLabel,
-                    prefixText: '₱ ',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: AppValidators.positiveNumber,
+                  decoration: const InputDecoration(labelText: AppStrings.clientServiceTypeLabel),
+                  validator: AppValidators.required,
                 ),
               ],
             ),

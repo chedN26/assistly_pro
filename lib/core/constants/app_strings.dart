@@ -121,7 +121,7 @@ class AppStrings {
   static const String clientContactPersonLabel = 'Contact Person';
   static const String clientEmailLabel = 'Email';
   static const String clientPhoneLabel = 'Phone';
-  static const String clientMonthlyPaymentLabel = 'Monthly Payment';
+  static const String clientServiceTypeLabel = 'Service Type';
   static const String clientPaymentAmountLabel = 'Amount';
 
   static const String searchClientsHint = 'Search clients by company name...';

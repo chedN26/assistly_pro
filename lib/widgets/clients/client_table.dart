@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../models/client.dart';
 import '../../models/status.dart';
-import '../../utils/formatters.dart';
 import '../common/flex_table.dart';
 import '../common/status_badge.dart';
 
@@ -30,7 +29,7 @@ class ClientTable extends StatelessWidget {
   static const List<FlexTableColumn> _columns = [
     FlexTableColumn(label: 'Company Name', flex: 3),
     FlexTableColumn(label: 'Contact Person', flex: 2),
-    FlexTableColumn(label: 'Monthly Payment', flex: 2),
+    FlexTableColumn(label: 'Service Type', flex: 2),
     FlexTableColumn(label: 'Status', flex: 1),
     FlexTableColumn(label: 'Actions', flex: 2),
   ];
@@ -48,7 +47,7 @@ class ClientTable extends StatelessWidget {
         return [
           Text(client.companyName, overflow: TextOverflow.ellipsis),
           Text(client.contactPerson, overflow: TextOverflow.ellipsis),
-          Text(AppFormatters.currency(client.monthlyPayment)),
+          Text(client.serviceType, overflow: TextOverflow.ellipsis),
           StatusBadge(status: client.status),
           Row(
             mainAxisSize: MainAxisSize.min,

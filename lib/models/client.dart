@@ -1,6 +1,14 @@
 import 'status.dart';
 
-/// Mirrors the `clients` Firestore collection (DDD Section 6).
+/// Mirrors the `clients` Firestore collection per the Firebase
+/// Database Design Document. Dart property names are unchanged
+/// (id, phone) even though the Firestore-side field names differ
+/// (clientId, contactNumber) — only fromMap()/toMap() changed.
+///
+/// `monthlyPayment` no longer exists — the DDD replaces it with
+/// `serviceType` (a category, not a dollar figure). Revenue is, and
+/// always was, computed from `client_payments.amount`, never from
+/// this field, so removing it doesn't affect any calculation.
 class Client {
   const Client({
     required this.id,
@@ -8,9 +16,10 @@ class Client {
     required this.contactPerson,
     required this.email,
     required this.phone,
-    required this.monthlyPayment,
+    required this.serviceType,
     required this.status,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -18,9 +27,14 @@ class Client {
   final String contactPerson;
   final String email;
   final String phone;
-  final double monthlyPayment;
+
+  /// Category of service this client receives (e.g. "Bookkeeping
+  /// Services"). Free-text, matching the DDD's `serviceType` field.
+  final String serviceType;
+
   final Status status;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   Client copyWith({
     String? id,
@@ -28,9 +42,10 @@ class Client {
     String? contactPerson,
     String? email,
     String? phone,
-    double? monthlyPayment,
+    String? serviceType,
     Status? status,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Client(
       id: id ?? this.id,
@@ -38,35 +53,38 @@ class Client {
       contactPerson: contactPerson ?? this.contactPerson,
       email: email ?? this.email,
       phone: phone ?? this.phone,
-      monthlyPayment: monthlyPayment ?? this.monthlyPayment,
+      serviceType: serviceType ?? this.serviceType,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   factory Client.fromMap(Map<String, dynamic> map) {
     return Client(
-      id: map['id'] as String,
+      id: map['clientId'] as String,
       companyName: map['companyName'] as String,
       contactPerson: map['contactPerson'] as String,
       email: map['email'] as String,
-      phone: map['phone'] as String,
-      monthlyPayment: (map['monthlyPayment'] as num).toDouble(),
+      phone: map['contactNumber'] as String,
+      serviceType: (map['serviceType'] as String?) ?? 'Unspecified',
       status: StatusX.fromString(map['status'] as String),
       createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse((map['updatedAt'] as String?) ?? (map['createdAt'] as String)),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'clientId': id,
       'companyName': companyName,
       'contactPerson': contactPerson,
       'email': email,
-      'phone': phone,
-      'monthlyPayment': monthlyPayment,
+      'contactNumber': phone,
+      'serviceType': serviceType,
       'status': status.label,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 }

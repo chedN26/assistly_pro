@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/helpers/responsive_helper.dart';
 import '../../models/client_payment.dart';
 import '../../providers/client_provider.dart';
 import '../../utils/formatters.dart';
 import '../../utils/validators.dart';
+import '../common/app_snackbar.dart';
 
 /// Add Payment dialog (UI/UX spec Section 12/15). Validation: Date
 /// required, Amount > 0 (DDD Section 12).
@@ -64,11 +65,14 @@ class _AddPaymentDialogState extends State<AddPaymentDialog> {
     setState(() => _isSubmitting = true);
 
     final ClientProvider provider = context.read<ClientProvider>();
+    final DateTime now = DateTime.now();
     final ClientPayment payment = ClientPayment(
       id: '', // Repository assigns the real ID; placeholder here is discarded.
       clientId: widget.clientId,
       date: _selectedDate!,
       amount: double.parse(_amountController.text.trim()),
+      createdAt: now, // Repository re-stamps this on write.
+      updatedAt: now, // Repository re-stamps this on write.
     );
     final bool success = await provider.addPayment(payment);
 
@@ -78,12 +82,7 @@ class _AddPaymentDialogState extends State<AddPaymentDialog> {
     if (success) {
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Failed to add payment.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, provider.errorMessage ?? 'Failed to add payment.');
     }
   }
 
@@ -92,9 +91,10 @@ class _AddPaymentDialogState extends State<AddPaymentDialog> {
     return AlertDialog(
       title: const Text(AppStrings.addPaymentTitle),
       content: SizedBox(
-        width: 360,
+        width: ResponsiveHelper.dialogContentWidth(context, preferred: 360),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
